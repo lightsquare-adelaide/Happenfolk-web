@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lightsquare",
+  title: BRAND.name,
   description: "Showcase and collaboration platform for South Australian independent artists.",
 };
 
@@ -24,7 +25,7 @@ function SiteFooter() {
   return (
     <footer className="border-t border-line bg-surface">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
-        <span>Lightsquare — South Australian independent artists</span>
+        <span>{BRAND.name} — South Australian independent artists</span>
         <span>Accounts live here since P2. Media and events arrive in later stages.</span>
       </div>
     </footer>

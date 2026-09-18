@@ -1,9 +1,10 @@
+import { BRAND } from "@/lib/brand";
 import { redirect } from "next/navigation";
 import { afterOnboardingPath } from "@/lib/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 
-export const metadata = { title: "Complete your profile — Lightsquare" };
+export const metadata = { title: `Complete your profile — ${BRAND.name}` };
 
 export default async function OnboardingPage({
   searchParams,

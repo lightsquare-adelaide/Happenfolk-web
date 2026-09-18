@@ -1,6 +1,7 @@
+import { BRAND } from "@/lib/brand";
 import { ResetPasswordForm } from "./reset-password-form";
 
-export const metadata = { title: "Set a new password — Lightsquare" };
+export const metadata = { title: `Set a new password — ${BRAND.name}` };
 
 export default function ResetPasswordPage() {
   return (

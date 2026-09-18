@@ -1,6 +1,7 @@
+import { BRAND } from "@/lib/brand";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
-export const metadata = { title: "Reset password — Lightsquare" };
+export const metadata = { title: `Reset password — ${BRAND.name}` };
 
 export default function ForgotPasswordPage() {
   return (
