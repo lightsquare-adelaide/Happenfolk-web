@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { BRAND } from "@/lib/brand";
 import { ProfileForm } from "./profile-form";
 
-export const metadata = { title: "Edit profile — Lightsquare" };
+export const metadata = { title: `Edit profile — ${BRAND.name}` };
 
 export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient();
