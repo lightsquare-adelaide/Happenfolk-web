@@ -202,6 +202,9 @@ export type Database = {
           ends_at: string | null
           host_id: string
           id: string
+
+          open_to_collaborate: boolean
+
           price_cents: number
           search_vector: unknown
           starts_at: string
@@ -218,6 +221,9 @@ export type Database = {
           ends_at?: string | null
           host_id: string
           id?: string
+
+          open_to_collaborate?: boolean
+
           price_cents?: number
           search_vector?: unknown
           starts_at: string
@@ -234,6 +240,9 @@ export type Database = {
           ends_at?: string | null
           host_id?: string
           id?: string
+
+          open_to_collaborate?: boolean
+
           price_cents?: number
           search_vector?: unknown
           starts_at?: string
@@ -757,6 +766,9 @@ export type Database = {
         Args: { p_registration_id: string }
         Returns: undefined
       }
+
+      handle_available: { Args: { p_handle: string }; Returns: boolean }
+
       is_event_collaborator: {
         Args: { p_event: string; p_member: string }
         Returns: boolean
