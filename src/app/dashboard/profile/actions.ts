@@ -30,7 +30,12 @@ export async function updateProfile(
     if (error.code === "23505") {
       return { error: "That handle was just taken by someone else. Try another.", saved: false };
     }
-    return { error: error.message, saved: false };
+    if (error.code === "23503") {
+      return { error: "Choose a category", saved: false };
+    }
+    // Keep database details out of the UI; log them for debugging.
+    console.error("updateProfile failed", error);
+    return { error: "Couldn’t save your profile. Please try again.", saved: false };
   }
 
   revalidatePath("/dashboard", "layout");

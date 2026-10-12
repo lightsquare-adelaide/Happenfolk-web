@@ -68,7 +68,11 @@ export function ProfileForm({ profile, categories }: { profile: Profile; categor
           name="handle"
           required
           value={handle}
-          onChange={(e) => setHandle(e.target.value.toLowerCase())}
+          onChange={(e) => {
+            setHandle(e.target.value.toLowerCase());
+            // Clear the previous handle's result so it never shows for the new one.
+            setAvailability("idle");
+          }}
           aria-describedby="handle-status"
           className={`${fieldClass} font-mono`}
         />
