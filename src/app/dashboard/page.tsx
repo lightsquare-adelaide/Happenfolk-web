@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { BRAND } from "@/lib/brand";
-import { formatEventDate, registrationStatusLabel } from "@/lib/dashboard";
+import { formatEventDate, orderEvents, registrationStatusLabel } from "@/lib/dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: `Dashboard — ${BRAND.name}` };
@@ -57,10 +57,10 @@ export default async function DashboardPage() {
     ? await supabase.from("events").select("id, title, status, starts_at").in("id", eventIds)
     : { data: [], error: null };
   const eventById = new Map((events.data ?? []).map((e) => [e.id, e]));
-  const myEvents = myEventIds
-    .map((id) => eventById.get(id))
-    .filter((e) => e !== undefined)
-    .sort((a, b) => b.starts_at.localeCompare(a.starts_at));
+  const myEvents = orderEvents(
+    myEventIds.map((id) => eventById.get(id)).filter((e) => e !== undefined),
+    new Date(),
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">

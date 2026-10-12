@@ -22,3 +22,12 @@ const eventDate = new Intl.DateTimeFormat("en-AU", {
 export function formatEventDate(iso: string): string {
   return eventDate.format(new Date(iso));
 }
+
+/** Upcoming events soonest first, then past events most recent first. */
+export function orderEvents<T extends { starts_at: string }>(events: T[], now: Date): T[] {
+  const time = (e: T) => new Date(e.starts_at).getTime();
+  const nowMs = now.getTime();
+  const upcoming = events.filter((e) => time(e) >= nowMs).sort((a, b) => time(a) - time(b));
+  const past = events.filter((e) => time(e) < nowMs).sort((a, b) => time(b) - time(a));
+  return [...upcoming, ...past];
+}
