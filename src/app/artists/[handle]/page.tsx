@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { BRAND } from "@/lib/brand";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -22,12 +22,17 @@ const getProfile = cache(async (handle: string) => {
 });
 
 export async function generateMetadata({ params }: Params) {
-  const profile = await getProfile((await params).handle);
+  const profile = await getProfile((await params).handle.toLowerCase());
   return { title: `${profile?.display_name ?? "Artist not found"} — ${BRAND.name}` };
 }
 
 export default async function ArtistPage({ params }: Params) {
-  const profile = await getProfile((await params).handle);
+  const { handle } = await params;
+  // Handles are stored lowercase, so /artists/Ada resolves to /artists/ada.
+  if (handle !== handle.toLowerCase()) {
+    permanentRedirect(`/artists/${encodeURIComponent(handle.toLowerCase())}`);
+  }
+  const profile = await getProfile(handle);
   if (!profile) notFound();
 
   return (
