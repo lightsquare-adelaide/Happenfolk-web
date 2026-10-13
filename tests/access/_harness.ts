@@ -43,7 +43,7 @@ export function stackConfig(): StackConfig {
     } catch {
       throw new Error(
         "tests/access needs a running local Supabase stack and a readable" +
-          " `supabase status`. Start it (supabase start / ~/bin/artlink-up)" +
+          " `supabase status`. Start it (supabase start)" +
           " and run `npm run test:access` — the CI invariants job provides" +
           " both on GitHub Actions.",
       );

@@ -6,8 +6,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.spec.ts', 'src/**/*.spec.ts'],
-    // No tests exist yet. Remove this once the first access-rule test lands
-    // (evaluation criterion E2) so an empty suite can no longer pass CI.
-    passWithNoTests: true,
+    setupFiles: ['./tests/setup.ts'],
+    testTimeout: 20_000,
   },
 })

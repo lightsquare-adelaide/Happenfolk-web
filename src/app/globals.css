@@ -12,6 +12,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  /* Lightsquare brand ramp (P0 foundation tokens; tune in later stages). */
+  --color-brand-50: #faf5ff;
+  --color-brand-100: #f3e8ff;
+  --color-brand-500: #8b5cf6;
+  --color-brand-700: #6d28d9;
+  --color-brand-900: #4c1d95;
+
+  --color-surface: #ffffff;
+  --color-muted: #52525b;
+  --color-line: #e4e4e7;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

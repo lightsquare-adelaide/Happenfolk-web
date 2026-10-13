@@ -159,3 +159,6 @@ supabase/.branches/
 
 # Certificates
 *.pem
+
+# Agent tool state
+.omc/
