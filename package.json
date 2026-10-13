@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run --exclude \"tests/access/**\" --exclude \"tests/auth/**\" --exclude \"tests/payments/**\"",
+    "test": "vitest run --exclude \"tests/access/**\" --exclude \"tests/auth/**\" --exclude \"tests/payments/**\" --exclude \"tests/media/**\"",
     "test:watch": "vitest",
     "check:invariants": "node scripts/check-invariants.mjs",
     "db:start": "supabase start",
@@ -18,7 +18,8 @@
     "test:access": "vitest run tests/access",
     "test:access:redgreen": "node scripts/access-matrix.mjs",
     "test:auth": "vitest run tests/auth",
-    "test:payments": "vitest run tests/payments"
+    "test:payments": "vitest run tests/payments",
+    "test:media": "vitest run --no-file-parallelism tests/media"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
@@ -27,6 +28,7 @@
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sharp": "0.35.4",
     "zod": "^4.5.4"
   },
   "devDependencies": {

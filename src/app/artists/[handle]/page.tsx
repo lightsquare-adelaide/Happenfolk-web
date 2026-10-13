@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
+import { ArtistMedia } from "@/components/artist-media";
 import { BRAND } from "@/lib/brand";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ const getProfile = cache(async (handle: string) => {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("profiles")
-    .select("handle, display_name, account_kind, bio, published, category_id")
+    .select("id, handle, display_name, account_kind, bio, published, category_id, avatar_path")
     .eq("handle", handle)
     .maybeSingle();
   if (!data) return null;
@@ -34,6 +35,7 @@ export default async function ArtistPage({ params }: Params) {
   }
   const profile = await getProfile(handle);
   if (!profile) notFound();
+  const avatarUrl = profile.avatar_path ? (await createSupabaseServerClient()).storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
@@ -44,6 +46,10 @@ export default async function ArtistPage({ params }: Params) {
       )}
 
       <header className="flex flex-col gap-1">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt={`${profile.display_name}'s avatar`} width={256} height={256} className="rounded-full" />
+        ) : null}
         <h1 className="text-3xl font-semibold">{profile.display_name}</h1>
         <p className="font-mono text-sm text-muted">@{profile.handle}</p>
         <p className="text-sm text-muted">
@@ -56,6 +62,7 @@ export default async function ArtistPage({ params }: Params) {
         </p>
       </header>
 
+      <ArtistMedia profileId={profile.id} />
       {profile.bio ? <p className="max-w-2xl whitespace-pre-line">{profile.bio}</p> : null}
     </main>
   );
