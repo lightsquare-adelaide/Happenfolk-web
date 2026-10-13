@@ -645,10 +645,13 @@ export type Database = {
           created_at: string
           display_name: string
           handle: string
+          headline: string | null
           id: string
+          location: string | null
           published: boolean
           search_vector: unknown
           updated_at: string
+          website: string | null
         }
         Insert: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
@@ -658,10 +661,13 @@ export type Database = {
           created_at?: string
           display_name: string
           handle: string
+          headline?: string | null
           id: string
+          location?: string | null
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Update: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
@@ -671,10 +677,13 @@ export type Database = {
           created_at?: string
           display_name?: string
           handle?: string
+          headline?: string | null
           id?: string
+          location?: string | null
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {
