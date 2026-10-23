@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export function RegisterForm() {
+export function RegisterForm({ nextPath }: { nextPath: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +32,7 @@ export function RegisterForm() {
       setBusy(false);
       return;
     }
-    router.replace("/onboarding");
+    router.replace(`/onboarding?next=${encodeURIComponent(nextPath)}`);
     router.refresh();
   }
 
@@ -67,7 +67,10 @@ export function RegisterForm() {
       >
         {busy ? "Signing up…" : "Sign up"}
       </button>
-      <Link href="/login" className="text-center text-sm text-muted underline">
+      <Link
+        href={`/login?next=${encodeURIComponent(nextPath)}`}
+        className="text-center text-sm text-muted underline"
+      >
         Already have an account? Log in
       </Link>
     </form>

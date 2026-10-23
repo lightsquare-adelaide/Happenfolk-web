@@ -1,3 +1,5 @@
+import { safeNextPath } from "./safe-next-path";
+
 /**
  * Onboarding form rules, kept framework-free so they can be unit
  * tested as pure functions.
@@ -24,4 +26,14 @@ export type AccountKind = "individual" | "organisation";
 /** True only for the two account kinds the product defines. */
 export function isValidAccountKind(kind: string): kind is AccountKind {
   return kind === "individual" || kind === "organisation";
+}
+
+/**
+ * Where to send a member once onboarding is complete (FR-ACC-07). Reuses
+ * safeNextPath, and refuses /onboarding itself: the page redirects a
+ * finished member to this target, so pointing it back would loop.
+ */
+export function afterOnboardingPath(next: unknown): string {
+  const path = safeNextPath(typeof next === "string" ? next : null);
+  return /^\/onboarding(?:[/?#]|$)/.test(path) ? "/dashboard" : path;
 }
