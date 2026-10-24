@@ -4,6 +4,7 @@ import { Archivo, Geist_Mono, Inter } from "next/font/google";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { Logo } from "@/components/logo";
+import { THEME_INIT } from "@/lib/theme";
 import "../lib/env";
 import "./globals.css";
 import "./hf.css";
@@ -57,7 +58,11 @@ function SiteFooter() {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-AU" className={`${archivo.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}>
+    // suppressHydrationWarning: THEME_INIT sets data-theme on <html> before React hydrates.
+    <html lang="en-AU" className={`${archivo.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>

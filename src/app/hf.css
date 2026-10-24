@@ -23,6 +23,21 @@
 }
 
 
+:root[data-theme="dark"] {
+  --bg: #0B0B0C;
+  --surface: #17171A;
+  --border: #27272A;
+  --ink: #F4F4F5;
+  --muted: #A1A1AA;
+  --accent-fill: #FF3D8B;   /* dark only: ink text on it 5.88:1 */
+  --on-accent: #0B0B0C;
+  --accent-text: #FF3D8B;
+  --rank-top-bg: #F5FF57;   /* acid highlight, rank #1 only, ink on acid 18.10:1 */
+  --rank-top-ink: #0B0B0C;
+  --success: #4ADE80;
+  color-scheme: dark;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -268,7 +283,7 @@ ul { padding: 0; list-style: none; }
   .logo svg.lockup { display: none; }
   .logo .mark { display: block; }
   .search { max-width: none; }
-  .nav-actions .btn-primary, .nav-actions .theme { display: none; }
+  .nav-actions .btn-primary { display: none; }
   .hero { padding: 32px 0 56px; }
   .hero .wrap { grid-template-columns: 1fr; gap: 32px; }
   .hero figure img { aspect-ratio: 4 / 3; }
@@ -299,7 +314,7 @@ ul { padding: 0; list-style: none; }
 .footer .logo { color: var(--ink); }
 
 /* ---------- Preview build additions ---------- */
-.preview-bar { background: var(--ink); color: var(--bg); font-size: 14px; text-align: center; padding: 8px 16px; }
+.preview-bar { background: #0B0B0C; color: #F4F4F5; font-size: 14px; text-align: center; padding: 8px 16px; }
 .preview-bar b { color: #F5FF57; font-weight: 700; }
 .soon-tag {
   display: inline-flex; align-items: center; height: 24px; padding: 0 8px; font-size: 12px; font-weight: 700;
@@ -321,3 +336,9 @@ ul { padding: 0; list-style: none; }
 .works img { cursor: zoom-in; }
 .strip { padding-left: 0; list-style: none; margin: 0; }
 .facts dt { color: var(--muted); }
+
+/* Existing Tailwind pages in dark mode: lift text colours that fail contrast on #0B0B0C. */
+:root[data-theme="dark"] .text-brand-700 { color: var(--accent-text); }
+:root[data-theme="dark"] :is(.text-red-600, .text-red-700) { color: #F87171; }
+:root[data-theme="dark"] :is(.text-green-700, .text-green-800) { color: #4ADE80; }
+.preview-bar { border-bottom: 1px solid var(--border); }

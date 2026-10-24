@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { NavLinks, TabBar } from "@/components/nav-links";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
 import { createSupabaseServerClient } from "../lib/supabase/server";
 
@@ -45,6 +46,7 @@ export async function SiteHeader() {
             <input id="q" name="q" type="search" placeholder="Search artists and events" />
           </form>
           <div className="nav-actions">
+            <ThemeToggle />
             {user ? (
               <>
                 <Link className="btn btn-text" href="/dashboard">
