@@ -33,7 +33,7 @@ const getWorks = cache(async (profileId: string) => {
   if (!items?.length) return [];
   const { data: media } = await supabase
     .from("media_assets")
-    .select("portfolio_item_id, path, alt_text, width, height, bucket, position")
+    .select("portfolio_item_id, path, alt_text, width, height, bucket, content_type, variant, position")
     .in("portfolio_item_id", items.map((i) => i.id));
   return items.map((item) => {
     const cover = coverAsset(
