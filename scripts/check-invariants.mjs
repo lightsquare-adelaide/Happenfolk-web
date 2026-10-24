@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CI invariant assertions for the Lightsquare data layer (P0/P1).
+ * CI invariant assertions for the Happenfolk data layer (P0/P1).
  *
  * Exits 0 only if ALL three hold against the LOCAL database:
  *   1. Every table in `public` has Row-Level Security enabled

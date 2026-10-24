@@ -1,0 +1,10 @@
+# Never upload local secrets or agent files with `vercel deploy`.
+.env*
+!.env.example
+.vercel
+node_modules
+.next
+supabase/.temp
+tests
+AGENTS.md
+CLAUDE.md

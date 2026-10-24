@@ -58,7 +58,7 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
         {busy ? "Logging in…" : "Log in"}
       </button>
       <div className="flex justify-between text-sm text-muted">
-        <Link href="/register" className="underline">
+        <Link href={`/register?next=${encodeURIComponent(nextPath)}`} className="underline">
           No account? Sign up
         </Link>
         <Link href="/forgot-password" className="underline">

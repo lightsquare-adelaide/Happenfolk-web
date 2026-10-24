@@ -83,6 +83,12 @@ jobs:
       - name: Auth-flow tests (middleware + sessions, real Next server)
         run: npm run test:auth
 
+      - name: Install synthesized-media fixture tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libimage-exiftool-perl
+
+      - name: Media and profile integration (real storage and Next server)
+        run: npm run test:media
+
   database:
     name: Migrations lint
     runs-on: ubuntu-latest
