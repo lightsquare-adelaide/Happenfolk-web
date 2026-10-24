@@ -1,5 +1,8 @@
-import { BRAND } from "@/lib/brand";
 import Link from "next/link";
+import { Icon } from "@/components/icons";
+import { Logo } from "@/components/logo";
+import { NavLinks, TabBar } from "@/components/nav-links";
+import { BRAND } from "@/lib/brand";
 import { createSupabaseServerClient } from "../lib/supabase/server";
 
 /**
@@ -23,38 +26,50 @@ export async function SiteHeader() {
   }
 
   return (
-    <header className="border-b border-line bg-surface">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-brand-700">
-          {BRAND.name}
-        </Link>
-        <nav aria-label="Primary" className="flex items-center gap-4 text-sm text-muted">
-          <span>Discover</span>
-          <span>Artists</span>
-          <span>Events</span>
-          {user ? (
-            <span className="flex items-center gap-3">
-              <Link href="/dashboard" className="font-mono text-foreground">
-                @{handle ?? user.id.slice(0, 8)}
-              </Link>
-              <form action="/auth/signout" method="post">
-                <button type="submit" className="underline">
-                  Log out
-                </button>
-              </form>
-            </span>
-          ) : (
-            <>
-              <Link href="/login" className="underline">
-                Log in
-              </Link>
-              <Link href="/register" className="underline">
-                Sign up
-              </Link>
-            </>
-          )}
-        </nav>
-      </div>
-    </header>
+    <>
+      <p className="preview-bar">
+        <b>Preview build.</b> Real accounts, profiles and portfolios; events and the Newsfeed use sample data and some
+        buttons are not live yet.
+      </p>
+      <header className="nav">
+        <div className="wrap">
+          <Link className="logo" href="/" aria-label={`${BRAND.name} home`}>
+            <Logo />
+          </Link>
+          <NavLinks />
+          <form className="search" role="search" action="/search">
+            <label htmlFor="q" className="sr-only">
+              Search artists and events
+            </label>
+            <Icon name="search" />
+            <input id="q" name="q" type="search" placeholder="Search artists and events" />
+          </form>
+          <div className="nav-actions">
+            {user ? (
+              <>
+                <Link className="btn btn-text" href="/dashboard">
+                  @{handle ?? user.id.slice(0, 8)}
+                </Link>
+                <form action="/auth/signout" method="post">
+                  <button type="submit" className="btn btn-ghost">
+                    Log out
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link className="btn btn-text" href="/login">
+                  Sign in
+                </Link>
+                <Link className="btn btn-primary" href="/register">
+                  Create account
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+      <TabBar signedIn={!!user} />
+    </>
   );
 }

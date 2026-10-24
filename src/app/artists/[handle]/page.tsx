@@ -1,6 +1,10 @@
 import { cache } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
+import Link from "next/link";
+import { DateBlock } from "@/components/event-card";
 import { BRAND } from "@/lib/brand";
+import { formatEventDate } from "@/lib/dashboard";
+import { getEvents, priceLabel } from "@/lib/showcase";
 import { coverAsset, type MediaRow } from "@/lib/portfolio";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -62,65 +66,112 @@ export default async function ArtistPage({ params }: Params) {
   }
   const profile = await getProfile(handle);
   if (!profile) notFound();
-  const works = await getWorks(profile.id);
-  const avatarUrl = profile.avatar_path ? (await createSupabaseServerClient()).storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
+  const db = await createSupabaseServerClient();
+  const [works, events] = await Promise.all([getWorks(profile.id), getEvents(db, { hostId: profile.id })]);
+  const avatarUrl = profile.avatar_path ? db.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
+  // Varied tile sizes as in the portfolio mockup; repeats every six works.
+  const tile = ["big", "", "tall", "", "wide", ""];
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
+    <main>
       {profile.published ? null : (
-        <p className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-muted">
-          Only you can see this page. Publish your profile to make it public.
+        <p className="wrap" style={{ paddingTop: 16 }}>
+          <span className="soon-tag">Only you can see this page. Publish your profile to make it public.</span>
         </p>
       )}
 
-      <header className="flex flex-col gap-1">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={`${profile.display_name}'s avatar`} width={256} height={256} className="rounded-full" />
-        ) : null}
-        <h1 className="text-3xl font-semibold">{profile.display_name}</h1>
-        <p className="font-mono text-sm text-muted">@{profile.handle}</p>
-        <p className="text-sm text-muted">
-          {[
-            profile.categoryName,
-            profile.account_kind === "organisation" ? "Organisation" : "Individual",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-      </header>
-
-      {profile.bio ? <p className="max-w-2xl whitespace-pre-line">{profile.bio}</p> : null}
-
-      <section aria-labelledby="works-heading" className="flex flex-col gap-3">
-        <h2 id="works-heading" className="text-xl font-semibold">
-          Portfolio
-        </h2>
-        {works.length === 0 ? (
-          <p className="text-sm text-muted">No works to show yet.</p>
-        ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {works.map((w) => (
-              <li key={w.id} className="flex flex-col gap-2 rounded-md border border-line p-3">
-                {w.cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- Supabase public URL; no image loader configured
-                  <img
-                    src={w.cover.url}
-                    alt={w.cover.alt_text ?? ""}
-                    width={w.cover.width ?? undefined}
-                    height={w.cover.height ?? undefined}
-                    loading="lazy"
-                    className="h-auto w-full rounded"
-                  />
-                ) : null}
-                <h3 className="font-medium">{w.title}</h3>
-                {w.published ? null : <p className="text-xs text-muted">Draft — only you can see this.</p>}
-                {w.description ? <p className="text-sm text-muted">{w.description}</p> : null}
-              </li>
-            ))}
-          </ul>
-        )}
+      <section className="profile">
+        <div className="wrap">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase public URL
+            <img className="avatar" src={avatarUrl} alt="" width={128} height={128} />
+          ) : (
+            <span />
+          )}
+          <div>
+            <h1 className="display d48">{profile.display_name}</h1>
+            <div className="meta">
+              <span className="font-mono">@{profile.handle}</span>
+              {profile.categoryName ? <span>{profile.categoryName}</span> : null}
+              <span>{profile.account_kind === "organisation" ? "Organisation" : "Individual artist"}</span>
+            </div>
+            {profile.bio ? <p className="bio whitespace-pre-line">{profile.bio}</p> : null}
+          </div>
+          <div className="profile-actions">
+            <span className="btn btn-ghost" aria-disabled="true" title="Not live in this preview">
+              Follow
+            </span>
+            <span className="btn btn-primary" aria-disabled="true" title="Not live in this preview">
+              Invite to collaborate
+            </span>
+          </div>
+        </div>
       </section>
+
+      <nav className="tabs" aria-label="Profile sections">
+        <div className="wrap">
+          <a href="#works" aria-current="page">
+            Portfolio<span className="count">{works.length}</span>
+          </a>
+          <a href="#events">
+            Events<span className="count">{events.length}</span>
+          </a>
+        </div>
+      </nav>
+
+      <div className="wrap">
+        <section id="works" aria-label="Portfolio">
+          {works.length === 0 ? (
+            <p className="empty">No works to show yet.</p>
+          ) : (
+            <div className="works">
+              {works.map((w, i) => (
+                <figure key={w.id} className={tile[i % tile.length]}>
+                  {w.cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Supabase public URL; no image loader configured
+                    <img
+                      src={w.cover.url}
+                      alt={w.cover.alt_text ?? ""}
+                      width={w.cover.width ?? undefined}
+                      height={w.cover.height ?? undefined}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div style={{ background: "var(--surface)" }} />
+                  )}
+                  <figcaption>
+                    <b>{w.title}</b>
+                    {w.published ? null : <span className="muted"> · Draft, only you can see this</span>}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section id="events" className="artist-events">
+          <div>
+            <h2 className="display d48">Upcoming events</h2>
+          </div>
+          {events.length === 0 ? (
+            <p className="empty">No upcoming events.</p>
+          ) : (
+            <ul className="ev-list">
+              {events.map((e) => (
+                <li key={e.id}>
+                  <DateBlock iso={e.starts_at} />
+                  <div className="grow">
+                    <Link href={`/events/${e.id}`}>{e.title}</Link>
+                    <div className="t14 muted">
+                      {formatEventDate(e.starts_at)} · {priceLabel(e.price_cents)}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
