@@ -79,6 +79,7 @@ export default async function DashboardPage() {
             .join(" · ")}
         </p>
         <nav className="flex gap-4 text-sm">
+          <Link href="/dashboard/media" className="text-brand-700 underline">Manage media</Link>
           <Link href="/dashboard/profile" className="text-brand-700 underline">
             Edit profile
           </Link>

@@ -39,7 +39,8 @@ describe("scenario 3 — anonymous visitor edits an event", () => {
       .from("events")
       .update({ title: "Vandalised" })
       .eq("id", event.id);
-    expect(error).toBeNull(); // 204, zero rows — check the data, not the code
+    // Either RLS filters zero rows or least-privilege grants deny the verb.
+    if (error) expect(error.code).toBe("42501");
 
     expect(await readScalar(host.client, "events", event.id, "title")).toBe(
       "Open Studios",

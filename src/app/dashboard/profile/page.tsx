@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BRAND } from "@/lib/brand";
+import { AvatarUpload } from "@/components/avatar-upload";
 import { ProfileForm } from "./profile-form";
 
 export const metadata = { title: `Edit profile — ${BRAND.name}` };
@@ -33,6 +34,7 @@ export default async function ProfilePage() {
           Your public page shows these details only while the profile is published.
         </p>
       </header>
+      <AvatarUpload />
       <ProfileForm profile={profile} categories={categories ?? []} />
     </main>
   );
