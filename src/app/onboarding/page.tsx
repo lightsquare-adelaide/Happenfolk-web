@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
+import { afterOnboardingPath } from "@/lib/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 
 export const metadata = { title: "Complete your profile — Lightsquare" };
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const nextPath = afterOnboardingPath((await searchParams).next);
   const supabase = await createSupabaseServerClient();
 
   // HARD RULE: authorization via getUser() (server verified).
@@ -19,17 +25,21 @@ export default async function OnboardingPage() {
   ]);
 
   if (profile && profile.category_id != null) {
-    redirect("/dashboard");
+    redirect(nextPath);
   }
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-12">
       <h1 className="text-2xl font-semibold">Complete your profile</h1>
       <p className="max-w-sm text-sm text-muted">
-        Choose your account type and category, and pick a public handle. You can’t reach the
-        dashboard until this is done.
+        Choose your account type and category, and pick a public handle. You can’t continue until
+        this is done.
       </p>
-      <OnboardingForm categories={categories ?? []} currentHandle={profile?.handle ?? null} />
+      <OnboardingForm
+        categories={categories ?? []}
+        currentHandle={profile?.handle ?? null}
+        nextPath={nextPath}
+      />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "./lib/env";
+import { safeNextPath } from "./lib/safe-next-path";
 
 /**
  * Route prefixes that require a session. This list (together with the
@@ -58,10 +59,10 @@ export async function middleware(request: NextRequest) {
   const isOnboarding = path.startsWith("/onboarding");
 
   if (isPublicAuthPage && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return redirectWithCookies(url);
+    // A signed-in member following a ?next= link still goes where it pointed.
+    return redirectWithCookies(
+      new URL(safeNextPath(request.nextUrl.searchParams.get("next")), request.url),
+    );
   }
 
   if (!isProtected) {
@@ -97,7 +98,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/onboarding";
     url.search = "";
-    url.searchParams.set("next", path);
+    url.searchParams.set("next", path + request.nextUrl.search);
     return redirectWithCookies(url);
   }
 
