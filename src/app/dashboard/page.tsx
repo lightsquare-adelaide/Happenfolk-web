@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -39,6 +40,9 @@ export default async function DashboardPage() {
         <p className="text-sm text-muted">
           Account type: {profile.account_kind === "organisation" ? "Organisation" : "Individual"}
         </p>
+        <Link href="/dashboard/profile" className="text-sm text-brand-700 underline">
+          Edit profile
+        </Link>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-3">
