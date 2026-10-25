@@ -63,8 +63,7 @@ export default async function Home() {
       <section className="hero">
         <div className="wrap">
           <div>
-            <h1 className="display d64">See who’s making work in South Australia.</h1>
-            <p className="t20 muted">Portfolios and events from independent artists. No account needed to look.</p>
+            <h1 className="display d64">See what your local creatives are doing</h1>
             <div className="ctas">
               {user ? (
                 <Link className="btn btn-primary" href="/dashboard">
