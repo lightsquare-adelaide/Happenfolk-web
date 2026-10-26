@@ -122,7 +122,7 @@ export default async function ArtistPage({ params }: Params) {
                   </div>
                 )}
                 <div className="mt-4 flex min-w-0 items-start justify-between gap-4">
-                  <h3 className="break-words text-xl font-medium">{work.title}</h3>
+                  <h3 className="break-words font-sans text-xl font-medium">{work.title}</h3>
                   {!work.published ? <span className="shrink-0 text-xs leading-7 text-muted">Draft · only you</span> : null}
                 </div>
                 {work.description ? <p className="mt-2 max-w-[60ch] whitespace-pre-line break-words text-sm leading-7 text-muted">{work.description}</p> : null}

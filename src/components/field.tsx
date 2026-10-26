@@ -2,17 +2,20 @@ import type { ReactNode } from "react";
 
 // Adapted from the user's shared form primitives: visible labels and one system.
 export const inputClass =
-  "block w-full min-w-0 rounded-none border border-line bg-background px-3 py-3 text-base text-foreground outline-offset-4 transition-colors focus:border-foreground disabled:cursor-not-allowed disabled:opacity-50";
+  "block w-full min-w-0 rounded-none border border-line-strong bg-background px-3 py-3 text-base text-foreground outline-offset-4 transition-colors focus:border-foreground disabled:cursor-not-allowed disabled:opacity-50";
+
+export const selectClass = inputClass + " pr-8";
+export const textareaClass = inputClass + " min-h-28 resize-y leading-7";
 
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap px-5 py-2.5 text-center text-sm font-medium outline-offset-4 transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 export const primaryButtonClass = buttonClass +
-  " border border-transparent bg-brand-700 text-white hover:brightness-95 dark:text-black";
+  " border border-transparent bg-brand text-on-brand hover:bg-brand-hover";
 export const secondaryButtonClass = buttonClass +
-  " border border-line bg-background text-foreground hover:bg-surface";
+  " border border-line-strong bg-background text-foreground hover:bg-surface";
 export const dangerButtonClass = buttonClass +
-  " border border-line bg-background text-red-700 hover:bg-surface dark:text-red-300";
+  " border border-danger bg-background text-danger hover:bg-danger-soft";
 export const cardClass = "border border-line bg-surface p-6";
 
 export function Field({ label, hint, mono, className, children }: {

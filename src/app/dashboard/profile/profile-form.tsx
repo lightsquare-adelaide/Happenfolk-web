@@ -58,10 +58,10 @@ export function ProfileForm({ profile, categories }: { profile: Profile; categor
             <legend className="mb-3 text-sm font-medium">Account type</legend>
             <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm">
               <label className="flex min-h-10 items-center gap-2">
-                <input type="radio" name="accountKind" value="individual" defaultChecked={profile.account_kind === "individual"} required /> Individual
+                <input type="radio" name="accountKind" value="individual" className="accent-brand" defaultChecked={profile.account_kind === "individual"} required /> Individual
               </label>
               <label className="flex min-h-10 items-center gap-2">
-                <input type="radio" name="accountKind" value="organisation" defaultChecked={profile.account_kind === "organisation"} required /> Organisation
+                <input type="radio" name="accountKind" value="organisation" className="accent-brand" defaultChecked={profile.account_kind === "organisation"} required /> Organisation
               </label>
             </div>
           </fieldset>
@@ -75,7 +75,7 @@ export function ProfileForm({ profile, categories }: { profile: Profile; categor
           <textarea name="bio" rows={6} maxLength={BIO_MAX} defaultValue={profile.bio ?? ""} className={inputClass + " resize-y leading-7"} />
         </Field>
         <label className="flex cursor-pointer items-start gap-3 border border-line bg-surface p-5">
-          <input type="checkbox" name="published" defaultChecked={profile.published} className="mt-1 shrink-0" />
+          <input type="checkbox" name="published" defaultChecked={profile.published} className="mt-1 shrink-0 accent-brand" />
           <span className="min-w-0">
             <span className="block font-medium">Publish my profile so anyone can see it</span>
             <span className="mt-1 block text-sm leading-6 text-muted">Turn this off to hide your profile. Your avatar is public independently of this setting.</span>

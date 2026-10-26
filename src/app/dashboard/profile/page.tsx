@@ -31,7 +31,7 @@ export default async function ProfilePage() {
         <aside className="min-w-0 border-t border-line pt-6 lg:sticky lg:top-24">
           <AvatarUpload currentUrl={avatarUrl} />
           <section className="mt-8 border-t border-line pt-6" aria-labelledby="profile-visibility">
-            <h2 id="profile-visibility" className="font-medium">Your public page</h2>
+            <h2 id="profile-visibility" className="font-sans font-medium">Your public page</h2>
             <p className="mt-2 text-sm leading-6 text-muted">{profile.published ? "Your profile is visible to visitors." : "Your profile is hidden. You can preview it while signed in."} Portfolio works have their own publication controls.</p>
             <Link href={"/artists/" + profile.handle} className="mt-3 inline-block break-all text-sm underline underline-offset-4">{profile.published ? "View" : "Preview"} @{profile.handle}</Link>
           </section>
