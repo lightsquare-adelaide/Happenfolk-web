@@ -1,0 +1,28 @@
+-- Local seed file.
+--
+-- `supabase db reset` replays every migration and then loads the files
+-- listed in [db.seed] sql_paths of supabase/config.toml. That list points
+-- here, and the file did not exist, so every start and reset printed
+-- "no files matched" (audit finding A-11, 26 October 2026). This file
+-- resolves the dangling reference.
+--
+-- It intentionally contains NO data:
+--   * The seven fixed categories are seeded by migration 0002, which is
+--     part of the schema history and therefore replayed on every reset.
+--   * Nothing here may create rows that the test suites do not own. The
+--     access, auth, payments and media suites assert on what they create,
+--     and a seeded published profile or event would change what an
+--     anonymous visitor can read (tests/auth/03 pins exactly that
+--     boundary).
+--
+-- Demo data with real media bytes is produced through the running
+-- application instead: `node scripts/demo-seed.mjs http://127.0.0.1:3210`
+-- signs a demo account up over HTTP and pushes an avatar and one
+-- published artwork through the validated upload pipeline.
+--
+-- Curated seed content (artists, events, portfolio items) is scheduled
+-- with the discovery and finalisation work; when it lands it belongs in
+-- this file or in ./seeds/*.sql referenced from config.toml, and it must
+-- stay idempotent and safe to replay.
+
+select 1;
