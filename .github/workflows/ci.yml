@@ -89,6 +89,9 @@ jobs:
       - name: Media and profile integration (real storage and Next server)
         run: npm run test:media
 
+      - name: Events rules and API integration (real stack and Next server)
+        run: npm run test:events
+
   database:
     name: Migrations lint
     runs-on: ubuntu-latest
