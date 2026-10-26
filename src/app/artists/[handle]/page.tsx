@@ -6,8 +6,11 @@ import { EmptyState } from "@/components/empty-state";
 import { publicDisplayAssets, type MediaRow } from "@/lib/portfolio";
 import { PortfolioGallery } from "@/components/portfolio-gallery";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 
 type Params = { params: Promise<{ handle: string }> };
+type PublicWork = Pick<Database["public"]["Tables"]["portfolio_items"]["Row"],
+  "id" | "title" | "description" | "published" | "year" | "tags">;
 
 // RLS returns a profile only when it is published or belongs to the
 // caller (FR-PRO-04), so an unpublished row here means the owner is viewing.
@@ -31,9 +34,12 @@ const getWorks = cache(async (profileId: string) => {
   const supabase = await createSupabaseServerClient();
   const { data: items, error: itemsError } = await supabase
     .from("portfolio_items")
-    .select("id, title, description, published")
+    .select("id, title, description, published, year, tags")
     .eq("profile_id", profileId)
-    .order("created_at", { ascending: false });
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .returns<PublicWork[]>();
   if (itemsError) throw new Error("Could not load this portfolio");
   if (!items?.length) return [];
   const { data: media, error: mediaError } = await supabase
@@ -126,6 +132,12 @@ export default async function ArtistPage({ params }: Params) {
                   {!work.published ? <span className="shrink-0 text-xs leading-7 text-muted">Draft · only you</span> : null}
                 </div>
                 {work.description ? <p className="mt-2 max-w-[60ch] whitespace-pre-line break-words text-sm leading-7 text-muted">{work.description}</p> : null}
+                {work.year ? <p className="mt-2 text-sm text-muted">{work.year}</p> : null}
+                {work.tags.length ? (
+                  <ul aria-label={`Tags for ${work.title}`} className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+                    {work.tags.map((tag) => <li key={tag} className="break-all">{`#${tag}`}</li>)}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>
