@@ -3,7 +3,8 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { BRAND } from "@/lib/brand";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { coverAsset, type MediaRow } from "@/lib/portfolio";
+import { publicDisplayAssets, type MediaRow } from "@/lib/portfolio";
+import { PortfolioGallery } from "@/components/portfolio-gallery";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ handle: string }> };
@@ -38,18 +39,21 @@ const getWorks = cache(async (profileId: string) => {
   const { data: media, error: mediaError } = await supabase
     .from("media_assets")
     .select("portfolio_item_id, path, alt_text, width, height, bucket, content_type, variant, position")
+    .eq("bucket", "media")
     .in("portfolio_item_id", items.map((i) => i.id));
   if (mediaError) throw new Error("Could not load portfolio media");
   return items.map((item) => {
-    const cover = coverAsset(
+    const assets = item.published ? publicDisplayAssets(
       (media ?? []).filter((m) => m.portfolio_item_id === item.id) as MediaRow[],
-    );
+    ) : [];
     return {
       ...item,
-      cover: cover && {
-        ...cover,
-        url: supabase.storage.from(cover.bucket).getPublicUrl(cover.path).data.publicUrl,
-      },
+      media: assets.map((asset) => ({
+        url: supabase.storage.from("media").getPublicUrl(asset.path).data.publicUrl,
+        smallUrl: asset.smallPath ? supabase.storage.from("media").getPublicUrl(asset.smallPath).data.publicUrl : null,
+        contentType: asset.content_type, altText: asset.alt_text ?? "",
+        width: asset.width, height: asset.height,
+      })),
     };
   });
 });
@@ -110,12 +114,8 @@ export default async function ArtistPage({ params }: Params) {
           <ul className="grid min-w-0 gap-x-8 gap-y-12 sm:grid-cols-2">
             {works.map((work) => (
               <li key={work.id} className="min-w-0">
-                {work.cover ? (
-                  <div className="flex aspect-[4/3] items-center justify-center overflow-hidden border border-line bg-surface">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- privacy-safe public derivative */}
-                    <img src={work.cover.url} alt={work.cover.alt_text ?? ""} width={work.cover.width ?? undefined}
-                      height={work.cover.height ?? undefined} loading="lazy" className="h-full w-full object-contain" />
-                  </div>
+                {work.media.length ? (
+                  <PortfolioGallery title={work.title} media={work.media} />
                 ) : (
                   <div className="flex aspect-[4/3] items-center justify-center border border-line bg-surface px-5 text-center text-sm text-muted">
                     {work.published ? "Media preview unavailable" : "Draft media is private"}
