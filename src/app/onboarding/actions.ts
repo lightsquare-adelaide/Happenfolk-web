@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { handleProblem, isValidAccountKind } from "@/lib/onboarding";
+import { afterOnboardingPath, handleProblem, isValidAccountKind } from "@/lib/onboarding";
 
 export type OnboardingState = { error: string | null };
 
@@ -44,5 +44,6 @@ export async function completeOnboarding(
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  // Re-validated here: the hidden field is client-controlled.
+  redirect(afterOnboardingPath(formData.get("next")));
 }

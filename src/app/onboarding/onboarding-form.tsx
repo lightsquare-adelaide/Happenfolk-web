@@ -10,9 +10,11 @@ type Category = { id: number; name: string };
 export function OnboardingForm({
   categories,
   currentHandle,
+  nextPath,
 }: {
   categories: Category[];
   currentHandle: string | null;
+  nextPath: string;
 }) {
   const [state, formAction, pending] = useActionState<OnboardingState, FormData>(
     completeOnboarding,
@@ -46,6 +48,7 @@ export function OnboardingForm({
 
   return (
     <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
+      <input type="hidden" name="next" value={nextPath} />
       <fieldset className="flex flex-col gap-2 text-sm">
         <legend className="mb-1">Account type</legend>
         <label className="flex items-center gap-2">
@@ -114,7 +117,7 @@ export function OnboardingForm({
         disabled={pending || availability === "taken"}
         className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
-        {pending ? "Saving…" : "Finish and go to dashboard"}
+        {pending ? "Saving…" : "Finish and continue"}
       </button>
     </form>
   );

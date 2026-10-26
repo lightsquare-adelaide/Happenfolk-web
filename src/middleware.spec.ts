@@ -54,9 +54,15 @@ beforeEach(() => {
 
 describe("middleware response cookies", () => {
   const routes = [
-    { label: "signed-in login", path: "/login?next=/events", target: "/dashboard", signedIn: true },
+    { label: "signed-in login", path: "/login?next=/events", target: "/events", signedIn: true },
     { label: "anonymous dashboard", path: "/dashboard", target: "/login?next=%2Fdashboard", signedIn: false },
     { label: "incomplete dashboard", path: "/dashboard", target: "/onboarding?next=%2Fdashboard", signedIn: true },
+    {
+      label: "incomplete deep link",
+      path: "/dashboard/profile?tab=works",
+      target: "/onboarding?next=%2Fdashboard%2Fprofile%3Ftab%3Dworks",
+      signedIn: true,
+    },
   ];
 
   for (const route of routes) {
