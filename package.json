@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run --exclude \"tests/access/**\" --exclude \"tests/auth/**\" --exclude \"tests/payments/**\" --exclude \"tests/media/**\" --exclude \"tests/events/**\"",
+    "test": "vitest run --exclude \"tests/access/**\" --exclude \"tests/auth/**\" --exclude \"tests/payments/**\" --exclude \"tests/media/**\" --exclude \"tests/events/**\" --exclude \"tests/portfolio/**\"",
     "test:watch": "vitest",
     "check:invariants": "node scripts/check-invariants.mjs",
     "db:start": "supabase start",
@@ -20,7 +20,8 @@
     "test:auth": "vitest run tests/auth",
     "test:payments": "vitest run tests/payments",
     "test:media": "vitest run --no-file-parallelism tests/media",
-    "test:events": "vitest run --no-file-parallelism tests/events"
+    "test:events": "vitest run --no-file-parallelism tests/events",
+    "test:portfolio": "vitest run --no-file-parallelism tests/portfolio"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
