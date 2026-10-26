@@ -1,0 +1,20 @@
+[
+  {
+    "family": "Archivo",
+    "file": "archivo-latin.woff2",
+    "cssSource": "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap",
+    "fontSource": "https://fonts.gstatic.com/s/archivo/v25/k3kQo8UDI-1M0wlSfdnoLg.woff2",
+    "licenseSource": "https://github.com/google/fonts/blob/main/ofl/archivo/OFL.txt",
+    "bytes": 90104,
+    "sha256": "e3a28eade21a900c7155a247757f4b2834c07bb7ef07ad7efa55cebaac1e8f5e"
+  },
+  {
+    "family": "Instrument Sans",
+    "file": "instrumentsans-latin.woff2",
+    "cssSource": "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap",
+    "fontSource": "https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0SZe1Q.woff2",
+    "licenseSource": "https://github.com/google/fonts/blob/main/ofl/instrumentsans/OFL.txt",
+    "bytes": 30092,
+    "sha256": "2ee17598a98d8a59e4df8152d015bec9ab8e4d5672cc0ab42bef806b568e3971"
+  }
+]

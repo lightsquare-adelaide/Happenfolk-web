@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { FormAlert } from "@/components/form-alert";
+import { Field, inputClass, primaryButtonClass, secondaryButtonClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { env } from "@/lib/env";
 
+/**
+ * Request a password reset email. Flow unchanged from the audited baseline:
+ * resetPasswordForEmail with a same-origin redirectTo.
+ */
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -28,33 +35,58 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <p className="max-w-sm text-sm text-muted">
-        Reset email sent. Open the link in the email to choose a new password. (On the local
-        stack, check the Mailpit inbox.)
-      </p>
+      <div className="flex w-full flex-col gap-5">
+        <FormAlert tone="success">
+          Reset email sent to {email || "your address"}.
+        </FormAlert>
+        <p className="max-w-md text-sm leading-6 text-muted">
+          Open the link in that email to choose a new password. The link signs you in for that one
+          step, so use the same browser you requested it from. On the local stack the mail arrives
+          in the Mailpit inbox.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/login" className={secondaryButtonClass}>
+            Back to log in
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            className="self-start text-sm text-muted underline decoration-line-strong underline-offset-4 hover:text-foreground"
+          >
+            Send to a different address
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full max-w-sm flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        Account email
+    <form onSubmit={onSubmit} aria-busy={busy} className="flex w-full flex-col gap-5">
+      <Field label="Email" hint="The address your account was created with.">
         <input
+          name="email"
           type="email"
           required
+          autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-2"
+          onChange={(event) => setEmail(event.target.value)}
+          className={inputClass}
         />
-      </label>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={busy}
-        className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {busy ? "Sending…" : "Send reset email"}
-      </button>
+      </Field>
+
+      {error ? <FormAlert tone="danger">{error}</FormAlert> : null}
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <button type="submit" disabled={busy} className={primaryButtonClass}>
+          {busy ? "Sending…" : "Send reset email"}
+        </button>
+        <Link
+          href="/login"
+          className="text-sm text-muted underline decoration-line-strong underline-offset-4 hover:text-foreground"
+        >
+          Back to log in
+        </Link>
+      </div>
     </form>
   );
 }

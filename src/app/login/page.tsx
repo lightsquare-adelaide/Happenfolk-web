@@ -1,3 +1,4 @@
+import { AuthShell } from "@/components/auth-shell";
 import { BRAND } from "@/lib/brand";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { LoginForm } from "./login-form";
@@ -15,9 +16,12 @@ export default async function LoginPage({
   const nextPath = safeNextPath(params.next);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-12">
-      <h1 className="text-2xl font-semibold">Log in to {BRAND.name}</h1>
+    <AuthShell
+      pageKey="login"
+      title="Log in"
+      subtitle="Pick up your profile, your portfolio and your events where you left them."
+    >
       <LoginForm nextPath={nextPath} />
-    </main>
+    </AuthShell>
   );
 }

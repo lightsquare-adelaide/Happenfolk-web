@@ -1,0 +1,63 @@
+{
+  "note": "Source record for the three public-domain works shipped in public/artwork/. Preserved from the project's existing local source cache before the database reset; each file was visually inspected on 2026-10-26. The external Art Institute of Chicago endpoint returned HTTP 403 that day, so no fresh licence revalidation was performed or claimed. Alt text is written from inspection, not from the old manifest titles. Policy: docs/design-system.md section 7.",
+  "images": [
+    {
+      "file": "aic-87045.jpg",
+      "publicPath": "/artwork/aic-87045.jpg",
+      "storagePath": "seed/sources/aic-87045.jpg",
+      "title": "Still Life with Geranium",
+      "creator": "Henri Matisse",
+      "license": "CC0 1.0",
+      "source": "Art Institute of Chicago",
+      "sourceUrl": "https://www.artic.edu/artworks/87045",
+      "sourceId": "87045",
+      "category": "visual-arts",
+      "date": "1906",
+      "width": 600,
+      "height": 746,
+      "alt": "A painted still life of a flowering geranium in a terracotta pot beside patterned vessels.",
+      "reviewedUse": "auth aside, quiet editorial placement",
+      "verification": "Existing manifest and local stored image; external source revalidation HTTP403 on 2026-10-26; visually inspected 2026-10-26"
+    },
+    {
+      "file": "aic-109819.jpg",
+      "publicPath": "/artwork/aic-109819.jpg",
+      "storagePath": "seed/sources/aic-109819.jpg",
+      "title": "Lozenge Composition with Yellow, Black, Blue, Red, and Gray",
+      "creator": "Piet Mondrian",
+      "license": "CC0 1.0",
+      "source": "Art Institute of Chicago",
+      "sourceUrl": "https://www.artic.edu/artworks/109819",
+      "sourceId": "109819",
+      "category": "visual-arts",
+      "date": "1921",
+      "width": 600,
+      "height": 600,
+      "alt": "A diamond-shaped painting with black lines dividing white, yellow and blue geometric areas.",
+      "reviewedUse": "auth aside, quiet editorial placement",
+      "verification": "Existing manifest and local stored image; external source revalidation HTTP403 on 2026-10-26; visually inspected 2026-10-26"
+    },
+    {
+      "file": "aic-65916.jpg",
+      "publicPath": "/artwork/aic-65916.jpg",
+      "storagePath": "seed/sources/aic-65916.jpg",
+      "title": "Movement",
+      "creator": "Marsden Hartley",
+      "license": "CC0 1.0",
+      "source": "Art Institute of Chicago",
+      "sourceUrl": "https://www.artic.edu/artworks/65916",
+      "sourceId": "65916",
+      "category": "visual-arts",
+      "date": "1913",
+      "width": 600,
+      "height": 604,
+      "alt": "An abstract painting with angular black forms, a red oval and yellow, green and blue shapes.",
+      "reviewedUse": "auth aside, quiet editorial placement",
+      "verification": "Existing manifest and local stored image; external source revalidation HTTP403 on 2026-10-26; visually inspected 2026-10-26"
+    }
+  ],
+  "fonts": {
+    "record": "public/fonts/font-sources.json",
+    "licenses": ["public/fonts/archivo-OFL.txt", "public/fonts/instrumentsans-OFL.txt"]
+  }
+}

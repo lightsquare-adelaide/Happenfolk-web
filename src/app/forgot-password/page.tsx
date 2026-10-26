@@ -1,3 +1,4 @@
+import { AuthShell } from "@/components/auth-shell";
 import { BRAND } from "@/lib/brand";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
@@ -5,9 +6,12 @@ export const metadata = { title: `Reset password · ${BRAND.name}` };
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-12">
-      <h1 className="text-2xl font-semibold">Reset your password</h1>
+    <AuthShell
+      pageKey="forgot-password"
+      title="Reset password"
+      subtitle="We email you a link that lets you choose a new password once."
+    >
       <ForgotPasswordForm />
-    </main>
+    </AuthShell>
   );
 }

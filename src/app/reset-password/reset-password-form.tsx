@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FormAlert } from "@/components/form-alert";
+import { Field, cardClass, inputClass, primaryButtonClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
  * Landing target of the recovery email. The browser client detects the
- * `?code=` in the URL and exchanges it for a recovery session; once the
- * PASSWORD_RECOVERY event arrives the user picks a new password.
+ * ?code= in the URL and exchanges it for a recovery session; once the
+ * PASSWORD_RECOVERY event arrives the visitor chooses a new password.
+ *
+ * Three designed states, because all three are reachable in normal use:
+ * arrived without a recovery link, link valid and waiting, password changed.
  */
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -42,37 +48,49 @@ export function ResetPasswordForm() {
   }
 
   if (done) {
-    return <p className="text-sm text-muted">Password updated. Taking you to your dashboard…</p>;
+    return (
+      <div className="flex w-full flex-col gap-5">
+        <FormAlert tone="success">Password updated.</FormAlert>
+        <p className="text-sm leading-6 text-muted">Taking you to your dashboard.</p>
+      </div>
+    );
   }
 
   if (!recovery) {
     return (
-      <p className="max-w-sm text-sm text-muted">
-        Open this page from the link in your reset email. The link signs you in and lets you
-        set a new password. Didn’t get one? Go back to “Forgot password” to send it again.
-      </p>
+      <div className="flex w-full flex-col gap-5">
+        <div className={cardClass}>
+          <p className="text-sm leading-6 text-muted">
+            Open this page from the link in your reset email. That link signs you in for one step
+            and lets you set a new password. Visiting it directly is not enough, and an expired
+            link has to be requested again.
+          </p>
+        </div>
+        <Link href="/forgot-password" className={`${primaryButtonClass} self-start`}>
+          Send a new reset email
+        </Link>
+      </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full max-w-sm flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        New password (at least 6 characters)
+    <form onSubmit={onSubmit} aria-busy={busy} className="flex w-full flex-col gap-5">
+      <Field label="New password" hint="At least 6 characters">
         <input
+          name="password"
           type="password"
           required
           minLength={6}
+          autoComplete="new-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-2"
+          onChange={(event) => setPassword(event.target.value)}
+          className={inputClass}
         />
-      </label>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={busy}
-        className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      </Field>
+
+      {error ? <FormAlert tone="danger">{error}</FormAlert> : null}
+
+      <button type="submit" disabled={busy} className={`${primaryButtonClass} w-full`}>
         {busy ? "Updating…" : "Set new password"}
       </button>
     </form>

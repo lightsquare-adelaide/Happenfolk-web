@@ -3,8 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FormAlert } from "@/components/form-alert";
+import { Field, inputClass, primaryButtonClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+/**
+ * Sign up. Behaviour is the audited baseline: signUp on the browser client,
+ * then onboarding, because the local stack has enable_confirmations = false
+ * and returns a session immediately. Presentation only changes here.
+ */
 export function RegisterForm({ nextPath }: { nextPath: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -37,42 +44,47 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full max-w-sm flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        Email
+    <form onSubmit={onSubmit} aria-busy={busy} className="flex w-full flex-col gap-5">
+      <Field label="Email">
         <input
+          name="email"
           type="email"
           required
+          autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-2"
+          onChange={(event) => setEmail(event.target.value)}
+          className={inputClass}
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Password (at least 6 characters)
+      </Field>
+
+      <Field label="Password" hint="At least 6 characters">
         <input
+          name="password"
           type="password"
           required
           minLength={6}
+          autoComplete="new-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-2"
+          onChange={(event) => setPassword(event.target.value)}
+          className={inputClass}
         />
-      </label>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={busy}
-        className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {busy ? "Signing up…" : "Sign up"}
+      </Field>
+
+      {error ? <FormAlert tone="danger">{error}</FormAlert> : null}
+
+      <button type="submit" disabled={busy} className={`${primaryButtonClass} w-full`}>
+        {busy ? "Signing up…" : "Create account"}
       </button>
-      <Link
-        href={`/login?next=${encodeURIComponent(nextPath)}`}
-        className="text-center text-sm text-muted underline"
-      >
-        Already have an account? Log in
-      </Link>
+
+      <p className="border-t border-line pt-4 text-sm text-muted">
+        Already have an account?{" "}
+        <Link
+          href={`/login?next=${encodeURIComponent(nextPath)}`}
+          className="font-medium text-brand-text underline decoration-brand-line underline-offset-4 hover:decoration-brand"
+        >
+          Log in
+        </Link>
+      </p>
     </form>
   );
 }

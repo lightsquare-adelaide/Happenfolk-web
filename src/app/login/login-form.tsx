@@ -3,8 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FormAlert } from "@/components/form-alert";
+import { Field, inputClass, primaryButtonClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+/**
+ * Password login. The auth behaviour is unchanged from the audited baseline
+ * (browser client, signInWithPassword, redirect to a same-origin next path);
+ * this file only carries the presentation.
+ *
+ * Field names are deliberately plain: "Email" and "Password" with no hint
+ * inside the label, so the accessible name stays exactly what a person (or a
+ * verification script) would say out loud.
+ */
 export function LoginForm({ nextPath }: { nextPath: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -28,40 +39,51 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full max-w-sm flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        Email
+    <form onSubmit={onSubmit} aria-busy={busy} className="flex w-full flex-col gap-5">
+      <Field label="Email">
         <input
+          name="email"
           type="email"
           required
+          autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-2"
+          onChange={(event) => setEmail(event.target.value)}
+          className={inputClass}
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Password
+      </Field>
+
+      <Field label="Password">
         <input
+          name="password"
           type="password"
           required
+          autoComplete="current-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-2"
+          onChange={(event) => setPassword(event.target.value)}
+          className={inputClass}
         />
-      </label>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={busy}
-        className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      </Field>
+
+      {error ? <FormAlert tone="danger">{error}</FormAlert> : null}
+
+      <button type="submit" disabled={busy} className={`${primaryButtonClass} w-full`}>
         {busy ? "Logging in…" : "Log in"}
       </button>
-      <div className="flex justify-between text-sm text-muted">
-        <Link href={`/register?next=${encodeURIComponent(nextPath)}`} className="underline">
-          No account? Sign up
-        </Link>
-        <Link href="/forgot-password" className="underline">
+
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line pt-4 text-sm">
+        <span className="text-muted">
+          No account yet?{" "}
+          <Link
+            href={`/register?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-brand-text underline decoration-brand-line underline-offset-4 hover:decoration-brand"
+          >
+            Create account
+          </Link>
+        </span>
+        <Link
+          href="/forgot-password"
+          className="text-muted underline decoration-line-strong underline-offset-4 hover:text-foreground"
+        >
           Forgot password
         </Link>
       </div>
