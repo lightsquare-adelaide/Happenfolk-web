@@ -120,3 +120,50 @@ the trust boundary, but title/description bounds live ONLY here:
     Red counterfactuals (restore in `afterAll`):
     `ACCESS_RED=portfolio-move-lock-removed`,
     `ACCESS_RED=portfolio-alloc-lock-removed`.
+
+## HTTP API (P2)
+
+All routes: origin-gated via `isSameOriginRequest` (403 `Cross-origin
+requests are not allowed`), auth via `supabase.auth.getUser()` (401 `Sign
+in first`), strict JSON-object bodies, friendly errors only (no raw
+database/storage text), denials never leak existence (404 `Work not found
+or not yours`).
+
+- `POST /api/portfolio/items` — body `{ title, description?, year?, tags? }`
+  → 201 `{ ok, item: { id, title, description, year, tags, position } }`.
+  Position is DB-allocated (atomic append); client-supplied
+  position/published/profile_id are rejected (`Unsupported field: …`).
+- `PATCH /api/portfolio/items/[id]` — metadata-only patch (same four
+  keys, strict allowlist) → 200 `{ ok, item }`. Empty patch → 400.
+- `DELETE /api/portfolio/items/[id]` — whole-item lifecycle via
+  `deleteItem` (below) → 200 `{ ok, deleted: true }`.
+- `POST /api/portfolio/reorder` — `{ itemId, direction }` →
+  200 `{ ok, moved: boolean }`; thin face over `move_portfolio_item`;
+  42501/P0002 map to friendly 404.
+- `PATCH /api/portfolio/media` — `{ itemId, assetId, alt }` → 200
+  `{ ok, altSaved: true }`. Per-asset caption edit for drafts originals
+  only: 409 `Unpublish this work before editing its captions…` while
+  published, 404 for foreign/derivative assets, alt nonblank ≤2000.
+  Serialized on the existing `withMediaOperation` lease.
+
+## Store lifecycle (src/lib/media/store.ts, P2 additions)
+
+- `setAssetAlt(supabase, uid, itemId, assetId, alt)` → `AltOutcome`
+  (`{ ok: true, altSaved: true }` | PipelineFailure). One owned
+  `drafts`/`original` row of one owned unpublished item; distinct
+  captions are never bulk-rewritten. Manager publication must OMIT the
+  global `altText` override so per-asset captions survive.
+- `deleteItem(supabase, uid, itemId)` → `DeleteOutcome`
+  (`{ ok: true, deleted: true }` | PipelineFailure). ONE lease; uses the
+  internal `unpublishUnderLease` directly (never nested
+  `unpublishItem`). Order: unpublish (if published) → remove known
+  public objects (own `media` rows with `count:'exact'` truncation
+  refusal PLUS deterministic derivative paths) → remove public rows →
+  remove private originals → delete the item row (media rows cascade).
+  Every path is ownership-prefix filtered (`{uid}/`), everything runs on
+  the caller's client, all failure messages are fixed friendly text
+  with a retry hint, and every step is idempotent: a retry after
+  "bytes gone, row-delete failed" succeeds WITHOUT requiring missing
+  originals to be downloadable again.
+- `media_kind` is advisory legacy: rendering/playback must read actual
+  `media_assets.content_type`, not the item column.

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { safeObjectPath, variantObjectPath, type ValidatedUpload } from "./validate";
 import { deriveImageVariants, imageDimensions } from "./derive";
+import { ALT_TEXT_MAX } from "../portfolio-management";
 
 /**
  * Media storage pipeline. Every storage/database operation runs with
@@ -396,4 +397,191 @@ export async function unpublishItem(supabase: SupabaseClient, uid: string, itemI
 export async function uploadMaster(supabase: SupabaseClient, uid: string, bytes: Uint8Array, validated: ValidatedUpload, opts: {itemId?: string; altText?: string} = {}): Promise<UploadOutcome> {
   const operation = () => uploadUnderLease(supabase, uid, bytes, validated, opts);
   return opts.itemId ? withMediaOperation(supabase, uid, opts.itemId, operation) : operation();
+}
+
+// ------------------------------------------------------------------
+// Per-asset alt editing (drafts only) — P2
+// ------------------------------------------------------------------
+
+export type AltOutcome = { ok: true; altSaved: true } | PipelineFailure;
+
+/**
+ * Edits ONE original asset's caption under the existing per-work lease.
+ * Only drafts-bucket originals of an owned, UNPUBLISHED item are
+ * editable: public derivatives carry copies of the caption, so editing
+ * while published would make them stale — the caller must unpublish
+ * first (and republish afterwards, which regenerates derivatives with
+ * the new per-asset captions). Distinct captions stay distinct: this
+ * never touches any other asset.
+ */
+async function setAssetAltUnderLease(
+  supabase: SupabaseClient,
+  uid: string,
+  itemId: string,
+  assetId: string,
+  alt: string,
+): Promise<AltOutcome> {
+  const item = await loadOwnedItem(supabase, uid, itemId);
+  if (!item) return fail(404, "Work item not found or not owned by this account");
+  if (item.published) {
+    return fail(409, "Unpublish this work before editing its captions, so the public copies do not go stale");
+  }
+  const trimmed = alt.trim();
+  if (!trimmed) return fail(400, "Alt text cannot be empty: describe what this media shows");
+  if (trimmed.length > ALT_TEXT_MAX) {
+    return fail(400, `Alt text must be at most ${ALT_TEXT_MAX} characters`);
+  }
+
+  const { data: asset } = await supabase
+    .from("media_assets")
+    .select("id, portfolio_item_id, bucket, variant")
+    .eq("id", assetId)
+    .maybeSingle();
+  if (
+    !asset ||
+    asset.portfolio_item_id !== itemId ||
+    asset.bucket !== "drafts" ||
+    asset.variant !== "original"
+  ) {
+    return fail(404, "Media not found for this work");
+  }
+
+  const { error } = await supabase
+    .from("media_assets")
+    .update({ alt_text: trimmed })
+    .eq("id", assetId)
+    .eq("portfolio_item_id", itemId)
+    .eq("bucket", "drafts")
+    .eq("variant", "original");
+  if (error) return fail(500, "Could not save the alt text; please retry");
+  return { ok: true, altSaved: true };
+}
+
+export async function setAssetAlt(
+  supabase: SupabaseClient,
+  uid: string,
+  itemId: string,
+  assetId: string,
+  alt: string,
+): Promise<AltOutcome> {
+  return withMediaOperation(supabase, uid, itemId, () =>
+    setAssetAltUnderLease(supabase, uid, itemId, assetId, alt),
+  );
+}
+
+// ------------------------------------------------------------------
+// Whole-item deletion — P2
+// ------------------------------------------------------------------
+
+export type DeleteOutcome = { ok: true; deleted: true } | PipelineFailure;
+
+/**
+ * Safe whole-item deletion under ONE lease (never nested inside
+ * unpublishItem's own lease — the internal unpublishUnderLease is used
+ * directly). Sequence, each step idempotent so a failed run is healed
+ * by re-running:
+ *
+ *   1. published?  → unpublishUnderLease (masters verified present,
+ *      public objects + rows removed, flag flipped). A failure here
+ *      keeps every row/path for the retry.
+ *   2. remove known public objects: the item's own media-bucket rows
+ *      PLUS the deterministic derivative paths of its originals (so a
+ *      crashed publication's strays go too). The row query uses
+ *      count:'exact' and REFUSES truncation — rows are never dropped
+ *      after an incomplete object set. Every path must live under the
+ *      caller's own `{uid}/` folder; anything else is skipped (it can
+ *      only be a hostile row value — storage RLS would refuse it too).
+ *   3. remove the private originals (same prefix validation). Missing
+ *      objects are NOT an error — a prior attempt may already have
+ *      removed the bytes; the retry must not require them back.
+ *   4. delete the item row (media_assets rows cascade). If this fails
+ *      after bytes are gone, the retry converges: the item is already
+ *      unpublished and storage removes of missing objects succeed.
+ *
+ * Everything runs on the CALLER'S client — no privileged delete of an
+ * arbitrary path or another uid's bytes is possible.
+ */
+async function deleteUnderLease(
+  supabase: SupabaseClient,
+  uid: string,
+  itemId: string,
+): Promise<DeleteOutcome> {
+  const item = await loadOwnedItem(supabase, uid, itemId);
+  if (!item) return fail(404, "Work item not found or not owned by this account");
+
+  if (item.published) {
+    const unpublished = await unpublishUnderLease(supabase, uid, itemId);
+    if (!unpublished.ok) return unpublished;
+  }
+
+  const ownFolder = `${uid}/`;
+
+  let originals: OriginalAsset[];
+  try {
+    originals = await loadOriginals(supabase, itemId);
+  } catch {
+    return fail(500, "Could not load all original media; deletion aborted (retry to complete)");
+  }
+
+  const { data: publicRows, error: publicRowError, count: publicCount } = await supabase
+    .from("media_assets")
+    .select("id, path", { count: "exact" })
+    .eq("portfolio_item_id", itemId)
+    .eq("bucket", "media");
+  if (publicRowError || (publicCount !== null && publicCount > (publicRows?.length ?? 0))) {
+    return fail(500, "Could not load all public media; deletion aborted (retry to complete)");
+  }
+  const publicRowsList = (publicRows ?? []) as { id: string; path: string }[];
+
+  const expectedPublic = originals.flatMap((original) =>
+    original.content_type === "video/mp4"
+      ? [variantObjectPath(original.path, "display", "mp4")]
+      : [variantObjectPath(original.path, "small"), variantObjectPath(original.path, "medium")],
+  );
+  const publicPaths = [
+    ...new Set([...publicRowsList.map((row) => row.path), ...expectedPublic]),
+  ].filter((path) => path.startsWith(ownFolder));
+  if (publicPaths.length > 0) {
+    const { error } = await supabase.storage.from("media").remove(publicPaths);
+    if (error) {
+      // Fixed friendly text: raw storage/SQL failure details must not leak.
+      return fail(500, "Failed to delete the public copies; retry to complete deletion", "The work remains listed. Retry to finish deleting the remaining files.");
+    }
+  }
+
+  if (publicRowsList.length > 0) {
+    const { error } = await supabase.from("media_assets").delete().in("id", publicRowsList.map((r) => r.id));
+    if (error) {
+      return fail(500, "Failed to delete the public media records (retry to complete deletion)");
+    }
+  }
+
+  const privatePaths = originals.map((original) => original.path).filter((path) => path.startsWith(ownFolder));
+  if (privatePaths.length > 0) {
+    const { error } = await supabase.storage.from("drafts").remove(privatePaths);
+    if (error) {
+      // Fixed friendly text: raw storage/SQL failure details must not leak.
+      return fail(500, "Failed to delete the private originals; retry to complete deletion", "The work remains listed. Retry to finish deleting the remaining files.");
+    }
+  }
+
+  const { error: itemError } = await supabase
+    .from("portfolio_items")
+    .delete()
+    .eq("id", itemId)
+    .eq("profile_id", uid);
+  if (itemError) {
+    // The bytes are already gone; the retry must still succeed, so say
+    // exactly what happened without pretending the work is deleted.
+    return fail(500, "Stored files were removed but the work record could not be deleted; retry to complete deletion");
+  }
+  return { ok: true, deleted: true };
+}
+
+export async function deleteItem(
+  supabase: SupabaseClient,
+  uid: string,
+  itemId: string,
+): Promise<DeleteOutcome> {
+  return withMediaOperation(supabase, uid, itemId, () => deleteUnderLease(supabase, uid, itemId));
 }

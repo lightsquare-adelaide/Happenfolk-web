@@ -30,6 +30,8 @@ export const YEAR_MIN = 1850;
 export const YEAR_MAX = 2100;
 export const TAG_MAX = 30;
 export const TAGS_MAX = 12;
+/** Same bound the #20 upload path enforces on per-asset alt text. */
+export const ALT_TEXT_MAX = 2000;
 
 export type ItemMetadata = {
   title: string;
@@ -213,6 +215,11 @@ export function parseItemPatch(body: unknown): ParseResult<ItemMetadataPatch> {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True for a canonical UUID string (route params and body ids). */
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_RE.test(value);
+}
 
 /** Validates the move body: { itemId: uuid, direction: 'up' | 'down' } and nothing else. */
 export function parseMoveRequest(

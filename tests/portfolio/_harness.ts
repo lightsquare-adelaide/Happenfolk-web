@@ -1,5 +1,6 @@
 import pg from "pg";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { admin } from "../access/_harness";
 
 /**
  * Portfolio-suite fixtures. The auth/user/admin machinery is the shared
@@ -69,4 +70,56 @@ export async function userConnection(user: TestUser): Promise<pg.Client> {
 
 export async function endConnections(): Promise<void> {
   await Promise.all(connections.splice(0).map((c) => c.end().catch(() => {})));
+}
+
+/**
+ * Scoped cleanup for users THIS suite created: their storage objects
+ * (both buckets, own-uid folders only), their portfolio rows (media
+ * cascade) and the auth user (profile cascades). Attempts every user,
+ * collects every failure, verifies actual remaining rows/objects are
+ * zero for these IDs, and THROWS when cleanup is incomplete — a leak
+ * must never pass silently. Never touches arbitrary legacy fixtures.
+ */
+export async function cleanupUsers(users: { client: SupabaseClient; userId: string }[]): Promise<void> {
+  const db = await admin();
+  const problems: string[] = [];
+  for (const user of users) {
+    const uid = user.userId;
+    try {
+      const { rows } = await db.query(
+        "select bucket_id, name from storage.objects where name like $1",
+        [`${uid}/%`],
+      );
+      const byBucket = new Map<string, string[]>();
+      for (const row of rows as { bucket_id: string; name: string }[]) {
+        byBucket.set(row.bucket_id, [...(byBucket.get(row.bucket_id) ?? []), row.name]);
+      }
+      for (const [bucket, names] of byBucket) {
+        const { error } = await user.client.storage.from(bucket).remove(names);
+        if (error) problems.push(`storage.remove ${bucket} for ${uid}: ${error.message}`);
+      }
+      await db.query("delete from public.portfolio_items where profile_id = $1", [uid]);
+      await db.query("delete from auth.users where id = $1", [uid]);
+
+      // Verify actual emptiness for this user's scoped state.
+      const remaining = await db.query(
+        `select (
+            (select count(*) from public.portfolio_items where profile_id = $1)
+            + (select count(*) from public.media_assets where portfolio_item_id in
+                (select id from public.portfolio_items where profile_id = $1))
+            + (select count(*) from auth.users where id = $1)
+            + (select count(*) from public.profiles where id = $1)
+            + (select count(*) from storage.objects where name like $2)
+          )::int as n`,
+        [uid, `${uid}/%`],
+      );
+      const left = Number(remaining.rows[0].n);
+      if (left !== 0) problems.push(`scoped rows/objects left behind for ${uid}: ${left}`);
+    } catch (error) {
+      problems.push(`cleanup failed for ${uid}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(`test-user cleanup incomplete:\n- ${problems.join("\n- ")}`);
+  }
 }
