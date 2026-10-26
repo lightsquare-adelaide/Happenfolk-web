@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { BRAND } from "@/lib/brand";
+import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import { coverAsset, type MediaRow } from "@/lib/portfolio";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -10,11 +12,12 @@ type Params = { params: Promise<{ handle: string }> };
 // caller (FR-PRO-04), so an unpublished row here means the owner is viewing.
 const getProfile = cache(async (handle: string) => {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("id, handle, display_name, account_kind, bio, published, category_id, avatar_path")
     .eq("handle", handle)
     .maybeSingle();
+  if (error) throw new Error("Could not load this artist profile");
   if (!data) return null;
   const { data: category } = data.category_id
     ? await supabase.from("categories").select("name").eq("id", data.category_id).maybeSingle()
@@ -25,16 +28,18 @@ const getProfile = cache(async (handle: string) => {
 // RLS limits this to published items, plus the owner's drafts for the owner.
 const getWorks = cache(async (profileId: string) => {
   const supabase = await createSupabaseServerClient();
-  const { data: items } = await supabase
+  const { data: items, error: itemsError } = await supabase
     .from("portfolio_items")
     .select("id, title, description, published")
     .eq("profile_id", profileId)
     .order("created_at", { ascending: false });
+  if (itemsError) throw new Error("Could not load this portfolio");
   if (!items?.length) return [];
-  const { data: media } = await supabase
+  const { data: media, error: mediaError } = await supabase
     .from("media_assets")
     .select("portfolio_item_id, path, alt_text, width, height, bucket, content_type, variant, position")
     .in("portfolio_item_id", items.map((i) => i.id));
+  if (mediaError) throw new Error("Could not load portfolio media");
   return items.map((item) => {
     const cover = coverAsset(
       (media ?? []).filter((m) => m.portfolio_item_id === item.id) as MediaRow[],
@@ -56,66 +61,71 @@ export async function generateMetadata({ params }: Params) {
 
 export default async function ArtistPage({ params }: Params) {
   const { handle } = await params;
-  // Handles are stored lowercase, so /artists/Ada resolves to /artists/ada.
-  if (handle !== handle.toLowerCase()) {
-    permanentRedirect(`/artists/${encodeURIComponent(handle.toLowerCase())}`);
-  }
+  if (handle !== handle.toLowerCase()) permanentRedirect("/artists/" + encodeURIComponent(handle.toLowerCase()));
   const profile = await getProfile(handle);
   if (!profile) notFound();
-  const avatarUrl = profile.avatar_path ? (await createSupabaseServerClient()).storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isOwner = user?.id === profile.id;
+  const avatarUrl = profile.avatar_path
+    ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
   const works = await getWorks(profile.id);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
-      {profile.published ? null : (
-        <p className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-muted">
-          Only you can see this page. Publish your profile to make it public.
-        </p>
-      )}
-
-      <header className="flex flex-col gap-1">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={`${profile.display_name}'s avatar`} width={256} height={256} className="rounded-full" />
-        ) : null}
-        <h1 className="text-3xl font-semibold">{profile.display_name}</h1>
-        <p className="font-mono text-sm text-muted">@{profile.handle}</p>
-        <p className="text-sm text-muted">
-          {[
+    <main className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:py-16">
+      {!profile.published ? (
+        <div role="status" className="mb-8 border border-line bg-surface px-5 py-4 text-sm leading-6">
+          Only you can see this profile. <Link href="/dashboard/profile" className="underline underline-offset-4">Publish it from your profile settings.</Link>
+        </div>
+      ) : null}
+      <header className="flex min-w-0 flex-col-reverse gap-6 border-b border-line pb-8 sm:flex-row sm:items-start sm:justify-between lg:pb-12">
+        <div className="min-w-0 max-w-4xl">
+          <p className="mb-4 text-sm text-muted">{[
             profile.categoryName,
-            profile.account_kind === "organisation" ? "Organisation" : "Individual",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
+            profile.account_kind === "organisation" ? "Organisation" : "Independent artist",
+          ].filter(Boolean).join(" · ")}</p>
+          <h1 className="break-words font-display text-5xl leading-[1.05] tracking-tight md:text-[64px]">{profile.display_name}</h1>
+          <p className="mt-4 break-all text-sm text-muted">{"@" + profile.handle}</p>
+        </div>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- public artist avatar
+          <img src={avatarUrl} alt={profile.display_name + "'s avatar"} width={160} height={160} className="h-28 w-28 shrink-0 border border-line object-cover sm:h-40 sm:w-40" />
+        ) : null}
       </header>
-
-      {profile.bio ? <p className="max-w-2xl whitespace-pre-line">{profile.bio}</p> : null}
-
-      <section aria-labelledby="works-heading" className="flex flex-col gap-3">
-        <h2 id="works-heading" className="text-xl font-semibold">
-          Portfolio
-        </h2>
+      {profile.bio ? (
+        <section aria-label="About this artist" className="py-8 lg:py-10">
+          <p className="max-w-[65ch] whitespace-pre-line break-words text-base leading-8">{profile.bio}</p>
+        </section>
+      ) : null}
+      <section aria-labelledby="works-heading" className="mt-10">
+        <div className="mb-7 flex flex-wrap items-baseline justify-between gap-4">
+          <h2 id="works-heading" className="font-display text-[32px] leading-tight md:text-5xl">Portfolio</h2>
+          {isOwner && works.length ? <Link prefetch={false} href="/dashboard/portfolio" className="text-sm underline underline-offset-4">Manage your portfolio</Link> : null}
+        </div>
         {works.length === 0 ? (
-          <p className="text-sm text-muted">No works to show yet.</p>
+          <EmptyState title={isOwner ? "Your work starts here." : "No published work yet."}
+            hint={isOwner ? "Build your portfolio in your studio. Publish each work when you are ready to share it." : "This artist has not shared any work yet."}
+            action={isOwner ? { href: "/dashboard/portfolio", label: "Manage portfolio" } : undefined} />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {works.map((w) => (
-              <li key={w.id} className="flex flex-col gap-2 rounded-md border border-line p-3">
-                {w.cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- Supabase public URL; no image loader configured
-                  <img
-                    src={w.cover.url}
-                    alt={w.cover.alt_text ?? ""}
-                    width={w.cover.width ?? undefined}
-                    height={w.cover.height ?? undefined}
-                    loading="lazy"
-                    className="h-auto w-full rounded"
-                  />
-                ) : null}
-                <h3 className="font-medium">{w.title}</h3>
-                {w.published ? null : <p className="text-xs text-muted">Draft — only you can see this.</p>}
-                {w.description ? <p className="text-sm text-muted">{w.description}</p> : null}
+          <ul className="grid min-w-0 gap-x-8 gap-y-12 sm:grid-cols-2">
+            {works.map((work) => (
+              <li key={work.id} className="min-w-0">
+                {work.cover ? (
+                  <div className="flex aspect-[4/3] items-center justify-center overflow-hidden border border-line bg-surface">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- privacy-safe public derivative */}
+                    <img src={work.cover.url} alt={work.cover.alt_text ?? ""} width={work.cover.width ?? undefined}
+                      height={work.cover.height ?? undefined} loading="lazy" className="h-full w-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="flex aspect-[4/3] items-center justify-center border border-line bg-surface px-5 text-center text-sm text-muted">
+                    {work.published ? "Media preview unavailable" : "Draft media is private"}
+                  </div>
+                )}
+                <div className="mt-4 flex min-w-0 items-start justify-between gap-4">
+                  <h3 className="break-words font-sans text-xl font-medium">{work.title}</h3>
+                  {!work.published ? <span className="shrink-0 text-xs leading-7 text-muted">Draft · only you</span> : null}
+                </div>
+                {work.description ? <p className="mt-2 max-w-[60ch] whitespace-pre-line break-words text-sm leading-7 text-muted">{work.description}</p> : null}
               </li>
             ))}
           </ul>
