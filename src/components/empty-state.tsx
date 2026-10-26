@@ -7,7 +7,7 @@ export function EmptyState({ title, hint, action }: {
 }) {
   return (
     <div className="flex min-h-52 min-w-0 flex-col items-start justify-center gap-4 border border-dashed border-line bg-surface p-6 sm:p-8">
-      <span aria-hidden="true" className="block h-4 w-4 border border-line" />
+      <span aria-hidden="true" className="block h-1 w-10 bg-brand" />
       <p className="break-words text-lg font-medium">{title}</p>
       {hint ? <p className="max-w-md text-sm leading-7 text-muted">{hint}</p> : null}
       {action ? <Link prefetch={false} href={action.href} className={secondaryButtonClass}>{action.label}</Link> : null}

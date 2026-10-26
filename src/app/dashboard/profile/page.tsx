@@ -20,7 +20,7 @@ export default async function ProfilePage() {
     ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:py-16">
+    <main className="shell-wrap py-10 lg:py-16">
       <Link href="/dashboard" className="text-sm underline underline-offset-4">Back to your studio</Link>
       <header className="mt-7 max-w-2xl">
         <h1 className="font-display text-5xl leading-none tracking-tight md:text-[64px]">Edit profile</h1>

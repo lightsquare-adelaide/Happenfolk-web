@@ -114,10 +114,10 @@ Package D does not own those files.
   Existing `rounded-md` / `rounded-lg` markup in other packages therefore renders square
   without edits. New code should not add `rounded-*` classes except `rounded-full` on
   avatars.
-- Shell container: `shell-wrap` (`max-width: var(--shell-max)`, `padding-inline:
-  var(--shell-gutter)`), currently 64rem / 1rem so the chrome lines up exactly with the
-  `max-w-5xl px-4` containers the existing pages use. Raise `--shell-max` and the page
-  containers together, never one alone.
+- Shell container: `shell-wrap` (`max-width: var(--shell-max)`, 80rem; gutter 1.25rem,
+  2rem from 40rem up). The header, the footer and every page container use it, so chrome
+  and content share one left edge. Pages must not add their own `max-w-*` + padding
+  wrapper.
 - Header: sticky, 64px tall, solid `bg-background`, hairline below. Z-index scale:
   content 0, header 40, mobile disclosure 50, skip link 60. No other layers.
 - Buttons: 44px minimum height (`min-h-11`), square, one label per intent. "Create

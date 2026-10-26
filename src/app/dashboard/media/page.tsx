@@ -24,7 +24,7 @@ export default async function MediaPage() {
       width: asset.width, height: asset.height, position: asset.position,
     })),
   }));
-  return <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
+  return <main className="shell-wrap flex flex-col gap-6 py-10">
     <header><h1 className="text-2xl font-semibold">Media management</h1>
       <Link href="/dashboard" className="text-brand-700 underline">Back to dashboard</Link></header>
     {error || media.error ? <p role="alert">Could not load your media. Please try again.</p> : <MediaPanel items={items} />}

@@ -73,11 +73,10 @@
   /* Scrim behind the mobile navigation disclosure. */
   --overlay: light-dark(rgb(11 11 12 / 0.45), rgb(0 0 0 / 0.6));
 
-  /* Shell metrics. Page containers owned by other packages currently use
-     max-w-5xl / px-4; matching them here keeps the chrome aligned with the
-     content. Raise both together (see docs/design-system.md). */
-  --shell-max: 64rem;
-  --shell-gutter: 1rem;
+  /* Shell metrics. The header, the footer and every page container use
+     shell-wrap, so chrome and content share one left edge at every width. */
+  --shell-max: 80rem;
+  --shell-gutter: 1.25rem;
 
   /* Motion. One easing curve, short durations, transform and opacity only. */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -284,6 +283,9 @@
   width: 100%;
   max-width: var(--shell-max);
   padding-inline: var(--shell-gutter);
+  @media (width >= 40rem) {
+    padding-inline: 2rem;
+  }
 }
 
 /* The brand allows three display sizes, each stepping down one size under

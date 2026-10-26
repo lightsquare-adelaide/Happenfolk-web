@@ -1,6 +1,6 @@
 export default function ArtistLoading() {
   return (
-    <main role="status" aria-busy="true" className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:py-16">
+    <main role="status" aria-busy="true" className="shell-wrap py-10 lg:py-16">
       <span className="sr-only">Loading artist profile…</span>
       <div aria-hidden="true" className="motion-safe:animate-pulse">
         <div className="h-5 w-36 bg-tint" />

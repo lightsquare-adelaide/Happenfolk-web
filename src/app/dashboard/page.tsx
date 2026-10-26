@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   const myEvents = orderEvents(events.data ?? [], new Date());
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:py-16">
+    <main className="shell-wrap py-10 lg:py-16">
       <header className="max-w-3xl">
         <h1 className="font-display text-5xl leading-none tracking-tight md:text-[64px]">Your studio</h1>
         <p className="mt-4 max-w-xl text-base leading-7 text-muted">Manage your work, events and public profile.</p>

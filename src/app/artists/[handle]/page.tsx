@@ -72,7 +72,7 @@ export default async function ArtistPage({ params }: Params) {
   const works = await getWorks(profile.id);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 lg:py-16">
+    <main className="shell-wrap py-10 lg:py-16">
       {!profile.published ? (
         <div role="status" className="mb-8 border border-line bg-surface px-5 py-4 text-sm leading-6">
           Only you can see this profile. <Link href="/dashboard/profile" className="underline underline-offset-4">Publish it from your profile settings.</Link>

@@ -1,7 +1,7 @@
 import { BRAND } from "@/lib/brand";
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-start justify-center gap-4 px-4 py-16">
+    <main className="shell-wrap flex flex-1 flex-col items-start justify-center gap-4 py-16">
       <p className="text-sm font-medium uppercase tracking-widest text-brand-700">
         South Australian independent artists
       </p>
