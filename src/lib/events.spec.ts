@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   adelaideWallTimeToInstant,
   canTransition,
+  instantToAdelaideWallClock,
   eventCategoryProblem,
   eventDescriptionProblem,
   eventInstantProblem,
@@ -129,6 +130,31 @@ describe("request body guards", () => {
   });
 });
 
+describe("instantToAdelaideWallClock (render side)", () => {
+  it("renders summer and winter instants with the real offsets", () => {
+    expect(instantToAdelaideWallClock("2026-01-15T09:30:00.000Z")).toEqual({ date: "2026-01-15", time: "20:00" });
+    expect(instantToAdelaideWallClock("2026-07-15T10:30:00.000Z")).toEqual({ date: "2026-07-15", time: "20:00" });
+  });
+
+  it("round-trips every converted instant back to the same wall reading", () => {
+    for (const [date, time] of [
+      ["2026-01-15", "20:00"], ["2026-07-15", "20:00"],
+      ["2026-10-04", "01:59"], ["2026-10-04", "03:00"],
+      ["2026-04-05", "01:59"], ["2026-04-05", "03:00"],
+    ] as const) {
+      const instant = adelaideWallTimeToInstant(date, time);
+      expect(instant.ok ? instant.iso : instant).not.toBe(false);
+      if (instant.ok) {
+        expect(instantToAdelaideWallClock(instant.iso)).toEqual({ date, time });
+      }
+    }
+  });
+
+  it("returns empty strings for an unparsable instant", () => {
+    expect(instantToAdelaideWallClock("nonsense")).toEqual({ date: "", time: "" });
+  });
+});
+
 describe("adelaideWallTimeToInstant (real Australia/Adelaide rules)", () => {
   // 2026 DST boundaries in Adelaide: forward 4 Oct 02:00 -> 03:00 ACST,
   // back 5 Apr 03:00 -> 02:00 ACDT.
@@ -172,8 +198,7 @@ describe("adelaideWallTimeToInstant (real Australia/Adelaide rules)", () => {
     });
   });
 
-  it("rejects impossible dates and malformed input", () => {
-    const feb30 = adelaideWallTimeToInstant("2026-02-30", "10:00");
+  it("rejects impossible dates and malformed input", () => {    const feb30 = adelaideWallTimeToInstant("2026-02-30", "10:00");
     expect(feb30.ok).toBe(false);
     if (!feb30.ok) expect(feb30.kind).toBe("invalid_date");
     const badTime = adelaideWallTimeToInstant("2026-01-01", "25:00");

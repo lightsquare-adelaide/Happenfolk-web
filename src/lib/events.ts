@@ -205,6 +205,35 @@ function zoneOffsetMinutesAt(instantMs: number): number {
 }
 
 /**
+ * The reverse direction of adelaideWallTimeToInstant: render a stored
+ * UTC instant as the Adelaide wall-clock reading an artist can put
+ * back into the form. Pure Intl — no fixed offsets, DST-correct, and
+ * independent of the machine timezone. Ambiguous instants were never
+ * creatable (the forward direction rejects them), so one wall reading
+ * maps back to exactly one of them.
+ */
+export function instantToAdelaideWallClock(iso: string): { date: string; time: string } {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return { date: "", time: "" };
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: EVENT_TIMEZONE,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const parts: Record<string, string> = {};
+  for (const part of fmt.formatToParts(new Date(ms))) {
+    if (part.type !== "literal") parts[part.type] = part.value;
+  }
+  // en-GB hour12:false renders midnight as "24" on some ICU versions.
+  const hour = parts.hour === "24" ? "00" : parts.hour;
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${hour}:${parts.minute}` };
+}
+
+/**
  * Converts one Adelaide wall-clock reading (YYYY-MM-DD + HH:mm) into a
  * UTC instant using the actual zone rules — daylight saving included,
  * independent of the server or browser timezone.
