@@ -10,13 +10,16 @@ import {
   type TestUser,
 } from "./_harness";
 
-// Red mode: an update policy that also covers anon — the anonymous
-// patch lands and the "unchanged" assertion below must FAIL.
+// Red mode removes both independent protections for this title update:
+// the deny-by-default policy and the absence of anonymous UPDATE grants.
+// The patch must then land, making the unchanged-data assertion fail.
 guard(
   "03-anon-update-permissive",
-  `create policy zzz_red_03_anon_update on public.events for update
+  `grant update (title) on public.events to anon;
+   create policy zzz_red_03_anon_update on public.events for update
      using (true) with check (true);`,
-  `drop policy zzz_red_03_anon_update on public.events;`,
+  `drop policy zzz_red_03_anon_update on public.events;
+   revoke update (title) on public.events from anon;`,
 );
 
 let host: TestUser;
@@ -34,7 +37,7 @@ afterAll(async () => {
 });
 
 describe("scenario 3 — anonymous visitor edits an event", () => {
-  it("is silently filtered: data ends unchanged", async () => {
+  it("keeps the event unchanged", async () => {
     const { error } = await anonClient()
       .from("events")
       .update({ title: "Vandalised" })

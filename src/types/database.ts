@@ -34,6 +34,46 @@ export type Database = {
   }
   public: {
     Tables: {
+      avatar_operation_locks: {
+        Row: {
+          expires_at: string
+          profile_id: string
+          token: string
+        }
+        Insert: {
+          expires_at: string
+          profile_id: string
+          token: string
+        }
+        Update: {
+          expires_at?: string
+          profile_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_operation_locks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatar_operation_locks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "recommended_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatar_operation_locks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "trending_artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -371,6 +411,32 @@ export type Database = {
           },
         ]
       }
+      media_operation_locks: {
+        Row: {
+          expires_at: string
+          item_id: string
+          token: string
+        }
+        Insert: {
+          expires_at: string
+          item_id: string
+          token: string
+        }
+        Update: {
+          expires_at?: string
+          item_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_operation_locks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "portfolio_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount_cents: number
@@ -440,6 +506,7 @@ export type Database = {
           subject_type: string
           viewed_at: string
           viewer_id: string | null
+          visitor_hash: string | null
         }
         Insert: {
           id?: never
@@ -447,6 +514,7 @@ export type Database = {
           subject_type: string
           viewed_at?: string
           viewer_id?: string | null
+          visitor_hash?: string | null
         }
         Update: {
           id?: never
@@ -454,6 +522,7 @@ export type Database = {
           subject_type?: string
           viewed_at?: string
           viewer_id?: string | null
+          visitor_hash?: string | null
         }
         Relationships: [
           {
@@ -757,6 +826,12 @@ export type Database = {
         Args: { p_registration_id: string }
         Returns: undefined
       }
+      claim_avatar_operation: { Args: { p_token: string }; Returns: boolean }
+      claim_media_operation: {
+        Args: { p_item_id: string; p_token: string }
+        Returns: boolean
+      }
+      handle_available: { Args: { p_handle: string }; Returns: boolean }
       is_event_collaborator: {
         Args: { p_event: string; p_member: string }
         Returns: boolean
@@ -764,6 +839,18 @@ export type Database = {
       is_event_host: {
         Args: { p_event: string; p_member: string }
         Returns: boolean
+      }
+      member_category_view_signal: {
+        Args: never
+        Returns: {
+          category_id: number
+          view_count: number
+        }[]
+      }
+      page_view_dedupe_window: { Args: never; Returns: string }
+      page_view_visitor_hash: {
+        Args: { p_subject_id: string; p_subject_type: string }
+        Returns: string
       }
       record_member_view: {
         Args: { p_subject_id: string; p_subject_type: string }
@@ -774,6 +861,18 @@ export type Database = {
         Returns: undefined
       }
       register_for_event: { Args: { p_event_id: string }; Returns: string }
+      release_avatar_operation: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      release_media_operation: {
+        Args: { p_item_id: string; p_token: string }
+        Returns: undefined
+      }
+      reorder_media: {
+        Args: { p_asset_id: string; p_direction: string; p_item_id: string }
+        Returns: boolean
+      }
       set_payment_stub_force_fail: {
         Args: { p_force_fail: boolean }
         Returns: undefined
@@ -805,12 +904,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -834,11 +933,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -859,11 +958,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -884,11 +983,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -901,11 +1000,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -65,6 +65,12 @@ column, for example) must be added to a fresh
 that creates it, or clients get `permission denied for column` instead of a
 policy decision.
 
+The anonymous-edit red fixture (scenario 03) now temporarily grants only
+`UPDATE (title)` as well as its permissive policy, then revokes that column
+grant during restoration. A permissive policy alone cannot exercise the
+unchanged-data assertion while the independent privilege restriction remains.
+Production grants are unchanged.
+
 Regression: `tests/access/23-event-host-id-immutable.spec.ts`. It asserts the
 ordinary collaborator rename still lands, the takeover is refused loudly (not
 RLS's silent `204, zero rows`), `host_id` is unchanged, the collaborator
@@ -156,7 +162,9 @@ reason: insert as a draft, attach media, then publish. "Insert already
 published, attach media afterwards" is no longer a legal path for anybody,
 fixtures included.
 
-Regression: `tests/access/24-published-work-keeps-media.spec.ts` with three
+Regression: `tests/access/28-published-media-concurrency.spec.ts` forces two final-media deletions in separate transactions, observes a real blocked backend, and removes only the parent lock in its red counterfactual.
+
+`tests/access/24-published-work-keeps-media.spec.ts` uses three
 guards — `24a-last-media-delete-guard-dropped`,
 `24b-last-media-move-guard-dropped`, `24c-publish-guard-media-check-removed` —
 each independently turning one assertion red.
@@ -282,9 +290,10 @@ as an accepted low-risk tradeoff.
 `supabase/config.toml` lists `./seed.sql` under `[db.seed] sql_paths` and the
 file did not exist, so every `supabase start` and `db reset` printed
 "no files matched". `supabase/seed.sql` now exists and intentionally contains
-**no data**: the seven fixed categories come from migration `0002`, and a
-seeded published profile or event would change what an anonymous visitor can
-read, which is exactly what `tests/auth/03` pins. Demo data with real media
+**no data**: the seven fixed categories come from migration `0002`; full
+curated demo content is delivered by the final seed package. The auth suite
+now owns separate private and published fixtures and remains independent of
+other public content. Demo data with real media
 bytes stays in `scripts/demo-seed.mjs`, which drives the running application
 over HTTP. Curated seed content belongs to the discovery/finalisation work
 and must stay idempotent when it lands.
