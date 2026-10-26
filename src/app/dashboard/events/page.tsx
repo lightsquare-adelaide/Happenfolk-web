@@ -28,10 +28,16 @@ export default async function DashboardEventsPage() {
   if (rosterError) throw new Error("Could not load your collaborations");
   const collaboratedIds = new Set((collaboratedRows ?? []).map((row) => row.event_id));
 
-  const { data: eventRows, error: eventsError } = await supabase
+  let eventsQuery = supabase
     .from("events")
     .select("id, title, location, description, category_id, starts_at, ends_at, status, cover_path, host_id, updated_at")
     .order("starts_at");
+  // Filter at the database boundary, before the API row limit: a large
+  // public directory must not push the caller's own events out of view.
+  eventsQuery = collaboratedIds.size
+    ? eventsQuery.or(`host_id.eq.${user.id},id.in.(${[...collaboratedIds].join(",")})`)
+    : eventsQuery.eq("host_id", user.id);
+  const { data: eventRows, error: eventsError } = await eventsQuery;
   if (eventsError) throw new Error("Could not load events");
   const mine = (eventRows ?? []).filter(
     (event) => event.host_id === user.id || collaboratedIds.has(event.id),

@@ -2,6 +2,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { appBase, createUser, sessionCookieHeader, startApp, type TestUser } from "../auth/_harness";
 import { stackConfig } from "../access/_harness";
+import { adelaideWallTimeToInstant, instantToAdelaideWallClock } from "../../src/lib/events";
 
 describe("public event pages on the real stack", () => {
   let host: TestUser;
@@ -20,8 +21,18 @@ describe("public event pages on the real stack", () => {
     expect(profile.error).toBeNull();
     handle = profile.data!.handle;
     cookie = await sessionCookieHeader(host.email, host.password);
+    // Keep the fixture inside the upcoming directory's first page even
+    // when other suites have left published events on the shared stack.
+    const now = Date.now();
+    let day = instantToAdelaideWallClock(new Date(now).toISOString()).date;
+    let start = adelaideWallTimeToInstant(day, "19:00");
+    if (start.ok && Date.parse(start.iso) <= now) {
+      day = new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+      start = adelaideWallTimeToInstant(day, "19:00");
+    }
+    if (!start.ok) throw new Error("Could not prepare the Adelaide evening fixture");
     for (const status of ["published", "draft", "cancelled"] as const) {
-      const inserted = await host.client.from("events").insert({ host_id: host.userId, title: names[status], location: "Adelaide exhibition space", description: "A public-facing artist exhibition.", starts_at: "2027-01-15T08:30:00Z", status }).select("id").single();
+      const inserted = await host.client.from("events").insert({ host_id: host.userId, title: names[status], location: "Adelaide exhibition space", description: "A public-facing artist exhibition.", starts_at: start.iso, status }).select("id").single();
       expect(inserted.error).toBeNull();
       ids.push(inserted.data!.id);
     }

@@ -79,16 +79,21 @@ export function EventsManager({ initial, categories }: { initial: ManagedEvent[]
     init: RequestInit,
     okText?: string,
   ): Promise<Record<string, unknown> | null> {
-    const response = await fetch(url, init);
-    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!response.ok) {
-      setMessage({ tone: "danger", text: (data.error as string) ?? `Request failed (${response.status})` });
-      if (response.status === 409) router.refresh(); // resync to the current version
+    try {
+      const response = await fetch(url, init);
+      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!response.ok) {
+        setMessage({ tone: "danger", text: (data.error as string) ?? `Request failed (${response.status})` });
+        if (response.status === 409) router.refresh(); // resync to the current version
+        return null;
+      }
+      if (okText) setMessage({ tone: "success", text: okText });
+      router.refresh();
+      return data;
+    } catch {
+      setMessage({ tone: "danger", text: "Could not reach the server. Check your connection and try again." });
       return null;
     }
-    if (okText) setMessage({ tone: "success", text: okText });
-    router.refresh();
-    return data;
   }
 
   const json = (method: string, body: unknown): RequestInit => ({
