@@ -1,27 +1,12 @@
 import { NextResponse } from "next/server";
 import { MAX_UPLOAD_BYTES } from "./validate";
+import { isSameOriginRequest } from "../request-origin";
 
 // Leave room for multipart metadata below Vercel's 4.5 MB payload limit.
 export const MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 64 * 1024;
 
 export function originProblem(request: Request): NextResponse | null {
-  const origin = request.headers.get("origin");
-  if (!origin) return null;
-  // `request.url` is reconstructed by the runtime and can disagree with
-  // the host the browser actually used (next start normalizes to
-  // localhost even when bound to 127.0.0.1, so real same-origin browser
-  // uploads were rejected while Node-fetch tests, which send no Origin,
-  // stayed green). The Host the client connected to is authoritative:
-  // accept it (and the proxy-forwarded variant) as same-origin too.
-  const allowed = new Set([new URL(request.url).origin]);
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  if (host) {
-    const proto =
-      request.headers.get("x-forwarded-proto") ??
-      new URL(request.url).protocol.replace(":", "");
-    allowed.add(`${proto}://${host}`);
-  }
-  if (!allowed.has(origin)) {
+  if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "Cross-origin media requests are not allowed" }, { status: 403 });
   }
   return null;

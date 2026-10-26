@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Red-green verifier for the access-rule suite (BUILD_PLAN P1:
- * "每一条都要先看着它红再看着它绿").
+ * "Every protection must be observed failing before it passes").
  *
  * For every tests/access/NN-*.spec.ts file:
  *   1. GREEN: plain vitest run of the file must PASS.
@@ -80,13 +80,13 @@ for (const file of specFiles) {
   rows.push({ file, guards: redResults, greenOk: green.ok });
 }
 
-console.log("\n## 见红/复绿矩阵\n");
-console.log("| 场景文件 | guard | 见红（应为败） | 绿（应为过） |");
+console.log("\n## Red/green verification matrix\n");
+console.log("| Scenario file | Guard | Red (must fail) | Green (must pass) |");
 console.log("|---|---|---|---|");
 for (const r of rows) {
   for (const g of r.guards) {
     console.log(
-      `| ${r.file} | ${g.guard} | ${g.sawRed ? "是 ✅" : "否 ❌"} | ${r.greenOk ? "是 ✅" : "否 ❌"} |`,
+      `| ${r.file} | ${g.guard} | ${g.sawRed ? "Yes ✅" : "No ❌"} | ${r.greenOk ? "Yes ✅" : "No ❌"} |`,
     );
   }
 }

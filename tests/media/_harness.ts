@@ -162,14 +162,14 @@ import net from "node:net";
 // (3005 + pid % 500) and trusts whichever server answers there. When
 // an unrelated local daemon already owns that port, the readiness
 // probe sees ITS 200 and every media test ends up asserting against
-// a stranger's app (observed: a static "耳朵" site answered the whole
+// a stranger's app (observed: an unrelated static site answered the whole
 // suite). This suite owns its server lifecycle instead: claim a port
 // that is verifiably free, start Next there, and accept readiness only
 // when THIS app answers on a route no other local app has —
 // GET /api/media/avatar, which must answer 405 because the route
 // exports POST only.
 
-const PORT_MIN = 3005;
+const PORT_MIN = 3801;
 const PORT_SPAN = 500;
 
 let port = 0;

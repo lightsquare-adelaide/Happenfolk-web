@@ -28,23 +28,28 @@ export function OnboardingForm({
   // never even query — and we avoid synchronous setState in the effect
   // (react-hooks/set-state-in-effect).
   const problem = handleProblem(handle);
+  const unchanged = handle === currentHandle;
 
   // Live availability check: debounce 300ms, then ask the SECURITY DEFINER RPC as
   // the anonymous public would — never by reading the profiles table.
   useEffect(() => {
-    if (problem) return;
+    if (problem || unchanged) return;
+    let active = true;
     const timer = setTimeout(async () => {
       setAvailability("checking");
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase.rpc("handle_available", { p_handle: handle });
+      if (!active) return;
       if (error) {
         setAvailability("idle");
         return;
       }
       setAvailability(data === true ? "free" : "taken");
     }, 300);
-    return () => clearTimeout(timer);
-  }, [handle, problem]);
+    return () => { active = false; clearTimeout(timer); };
+  }, [handle, problem, unchanged]);
+
+  const taken = !problem && !unchanged && availability === "taken";
 
   return (
     <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
@@ -86,22 +91,22 @@ export function OnboardingForm({
           name="handle"
           required
           value={handle}
-          onChange={(e) => setHandle(e.target.value.toLowerCase())}
+          onChange={(e) => { setHandle(e.target.value.toLowerCase()); setAvailability("idle"); }}
           className="rounded-md border border-line bg-surface px-3 py-2 font-mono"
         />
       </label>
       <p
         aria-live="polite"
         className={`text-xs ${
-          !problem && availability === "taken"
+          taken
             ? "text-red-600"
-            : !problem && availability === "free"
+            : !problem && !unchanged && availability === "free"
               ? "text-green-700"
               : "text-muted"
         }`}
       >
         {problem ??
-          (availability === "checking"
+          (unchanged ? "This is your current handle" : availability === "checking"
             ? "Checking…"
             : availability === "free"
               ? "✓ Available"
@@ -114,7 +119,7 @@ export function OnboardingForm({
 
       <button
         type="submit"
-        disabled={pending || availability === "taken"}
+        disabled={pending || taken || Boolean(problem)}
         className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {pending ? "Saving…" : "Finish and continue"}
