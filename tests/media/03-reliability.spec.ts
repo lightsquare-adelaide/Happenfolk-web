@@ -105,5 +105,79 @@ describe("media integration reliability", () => {
       }
     }
   });
+  it("reorders tied positions and keeps public variants aligned", async () => {
+    const first = await upload();
+    const response = await fetch(
+      `${appBase()}/api/media/upload`,
+      uploadRequest(cookie, "tied.jpg", fixtures.gpsJpg, {
+        itemId: first.itemId,
+        altText: "Second image for tied ordering",
+      }),
+    );
+    expect(response.status).toBe(201);
+    expect((await action("publish", first.itemId)).status).toBe(200);
 
+    // Simulate legacy data where originals and public copies share a position.
+    const tied = await owner.client
+      .from("media_assets")
+      .update({ position: 0 })
+      .eq("portfolio_item_id", first.itemId);
+    expect(tied.error).toBeNull();
+
+    const before = await owner.client
+      .from("media_assets")
+      .select("id")
+      .eq("portfolio_item_id", first.itemId)
+      .eq("bucket", "drafts")
+      .eq("variant", "original")
+      .order("position")
+      .order("created_at")
+      .order("id");
+    expect(before.error).toBeNull();
+    expect(before.data).toHaveLength(2);
+    const [previous, moving] = before.data!;
+
+    const moved = await fetch(
+      `${appBase()}/api/media/reorder`,
+      jsonRequest(cookie, {
+        itemId: first.itemId,
+        assetId: moving.id,
+        direction: "up",
+      }),
+    );
+    expect(moved.status).toBe(200);
+    expect(await moved.json()).toMatchObject({ ok: true, moved: true });
+
+    const originals = await owner.client
+      .from("media_assets")
+      .select("id, path, position")
+      .eq("portfolio_item_id", first.itemId)
+      .eq("bucket", "drafts")
+      .eq("variant", "original")
+      .order("position");
+    expect(originals.error).toBeNull();
+    expect(originals.data?.map(row => row.id)).toEqual([
+      moving.id,
+      previous.id,
+    ]);
+    expect(originals.data?.map(row => row.position)).toEqual([0, 1]);
+
+    const publicRows = await owner.client
+      .from("media_assets")
+      .select("path, position")
+      .eq("portfolio_item_id", first.itemId)
+      .eq("bucket", "media");
+    expect(publicRows.error).toBeNull();
+    expect(publicRows.data).toHaveLength(4);
+
+    for (const original of originals.data!) {
+      const stem = original.path.replace(/\.[^/.]+$/, "");
+      for (const variant of ["small", "medium"]) {
+        expect(publicRows.data).toContainEqual({
+          path: `${stem}-${variant}.webp`,
+          position: original.position,
+        });
+      }
+    }
+  });
 });
