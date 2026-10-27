@@ -15,7 +15,35 @@ import { env } from "../env";
  * verified). Never decide authorization from the local session snapshot — it only
  * decodes the local cookie.
  */
-export async function createSupabaseServerClient() {
+/**
+ * Scoped PostgREST header forwarding for the view-recording route ONLY.
+ *
+ * F's anonymous dedupe (migration 20261026000600) derives the visitor
+ * identity inside record_page_view from the headers PostgREST received
+ * (request.headers: x-forwarded-for + user-agent). A server-to-DB call
+ * made with the plain SDK client arrives with supabase-js's own headers,
+ * so every anonymous visitor behind this Next server would collapse into
+ * ONE fingerprint (subject-global suppression). Passing the validated
+ * trusted client IP and the original User-Agent as global headers on a
+ * dedicated client preserves per-visitor identity without touching any
+ * ordinary auth caller.
+ *
+ * This is a deliberate, narrow trust decision: the values MUST come from
+ * the trusted-proxy extraction in src/lib/view-throttle.ts, never from
+ * arbitrary client headers. It is not spoof-proof against callers who
+ * talk to PostgREST directly with the public anon key (documented
+ * residual risk, same as the migration's own note).
+ */
+export type ViewRecordingIdentity = {
+  /** Validated client IP from the trusted proxy header (never logged). */
+  clientIp: string;
+  /** Original validated User-Agent of the visitor (never logged). */
+  userAgent: string;
+};
+
+export async function createSupabaseServerClient(options?: {
+  viewRecordingIdentity?: ViewRecordingIdentity;
+}) {
   const cookieStore = await cookies();
   return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
@@ -32,5 +60,15 @@ export async function createSupabaseServerClient() {
         }
       },
     },
+    ...(options?.viewRecordingIdentity
+      ? {
+          global: {
+            headers: {
+              "x-forwarded-for": options.viewRecordingIdentity.clientIp,
+              "user-agent": options.viewRecordingIdentity.userAgent,
+            },
+          },
+        }
+      : {}),
   });
 }
