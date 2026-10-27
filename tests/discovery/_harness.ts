@@ -4,7 +4,7 @@ import {
   admin,
   anonClient,
   createPortfolioItem,
-  createUser,
+  createUser as createAccessUser,
   stackConfig,
   type ItemRow,
   type TestUser,
@@ -34,7 +34,7 @@ import {
  * pin the owner-privacy rule of search_items.
  */
 
-export { admin, anonClient, createPortfolioItem, createUser, stackConfig };
+export { admin, anonClient, createPortfolioItem, stackConfig };
 export type { TestUser };
 
 export const MUSIC = 1;
@@ -136,6 +136,14 @@ const createdProfileSubjectIds: string[] = [];
 const createdEventIds: string[] = [];
 const createdItemIds: string[] = [];
 
+/** Register each successful account before another fixture operation can fail. */
+export async function createUser(label: string): Promise<TestUser> {
+  const user = await createAccessUser(label);
+  createdUserIds.push(user.userId);
+  createdProfileSubjectIds.push(user.userId);
+  return user;
+}
+
 /** Idempotent fixture load (single process per file, serial suite). */
 export async function loadFixtures(): Promise<DiscoveryFixtures> {
   if (fixtures) return fixtures;
@@ -143,16 +151,10 @@ export async function loadFixtures(): Promise<DiscoveryFixtures> {
   const musician = await createUser(`disc-musician-${runId}`);
   const filmmaker = await createUser(`disc-filmmaker-${runId}`);
   const privateArtist = await createUser(`disc-private-${runId}`);
-  createdUserIds.push(musician.userId, filmmaker.userId, privateArtist.userId);
 
   await publishProfile(musician, `Discoverable Musician ${runId}`, MUSIC, true);
   await publishProfile(filmmaker, `Discoverable Filmmaker ${runId}`, FILM, true);
   await publishProfile(privateArtist, `Hidden Artist ${runId}`, MUSIC, false);
-  createdProfileSubjectIds.push(
-    musician.userId,
-    filmmaker.userId,
-    privateArtist.userId,
-  );
 
   // Decay pair: one recent low-count view beats three week-old views.
   const recentEvent = await createEvent(
@@ -265,7 +267,17 @@ export async function loadFixtures(): Promise<DiscoveryFixtures> {
  */
 export async function cleanupFixtures(): Promise<void> {
   const a = await admin();
-  const subjectIds = [...createdEventIds, ...createdItemIds, ...createdProfileSubjectIds];
+  // Include subjects created before a later setup step failed. page_views has
+  // polymorphic subject IDs, so deleting an auth user alone cannot remove them.
+  const owned = await a.query<{ id: string }>(
+    `select id from public.events where host_id = any ($1::uuid[])
+     union select id from public.portfolio_items where profile_id = any ($1::uuid[])`,
+    [createdUserIds],
+  );
+  const subjectIds = [...new Set([
+    ...createdEventIds, ...createdItemIds, ...createdProfileSubjectIds,
+    ...owned.rows.map((row) => row.id),
+  ])];
   if (subjectIds.length > 0) {
     await a.query(
       `delete from public.page_views where subject_id = any ($1::uuid[])`,
@@ -276,6 +288,19 @@ export async function cleanupFixtures(): Promise<void> {
     // Cascade removes profile, events, items, media, interactions and
     // nulls page_views.viewer_id for this user.
     await a.query(`delete from auth.users where id = $1`, [uid]);
+  }
+  const remaining = await a.query<{ count: string }>(
+    `select (
+       (select count(*) from auth.users where id = any ($1::uuid[])) +
+       (select count(*) from public.profiles where id = any ($1::uuid[])) +
+       (select count(*) from public.events where host_id = any ($1::uuid[])) +
+       (select count(*) from public.portfolio_items where profile_id = any ($1::uuid[])) +
+       (select count(*) from public.page_views where subject_id = any ($2::uuid[]))
+     )::text as count`,
+    [createdUserIds, subjectIds],
+  );
+  if (remaining.rows[0].count !== "0") {
+    throw new Error(`Discovery fixture cleanup left ${remaining.rows[0].count} scoped rows`);
   }
 }
 

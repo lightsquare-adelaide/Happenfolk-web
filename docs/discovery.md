@@ -20,8 +20,8 @@ trending_score = Σ exp(-λ · age_days)   over page_views in the last 7 days
 ```
 
 A view from an hour ago counts ~0.99, a day ago ~0.71, six days ago
-~0.125. The window edge is not a cliff (a week-old view still carries
-~9% weight) while a fresh spike visibly outranks last week's plateau.
+~0.125. Within the seven-day window, a nearly week-old view carries
+~9% weight; older views are excluded. Recent spikes outweigh older views.
 Raw counts (`view_count`) are kept alongside for display, but ordering
 is by score.
 
