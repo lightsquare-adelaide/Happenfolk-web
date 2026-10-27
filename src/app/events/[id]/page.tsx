@@ -1,7 +1,7 @@
 import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { secondaryButtonClass } from "@/components/field";
+import { primaryButtonClass, secondaryButtonClass } from "@/components/field";
 import { BRAND } from "@/lib/brand";
 import { formatEventDate } from "@/lib/dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -12,7 +12,7 @@ const getEvent = cache(async (id: string) => {
   if (!uuid.test(id)) return null;
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from("events")
-    .select("id, title, description, location, starts_at, ends_at, cover_path, status, host_id, category_id")
+    .select("id, title, description, location, starts_at, ends_at, cover_path, status, host_id, category_id, price_cents")
     .eq("id", id).maybeSingle();
   if (error) throw new Error("Could not load this event");
   return data;
@@ -81,6 +81,20 @@ export default async function EventPage({ params }: Context) {
           </div>
         </dl>
       </header>
+      {/* Tingxuan: integrated event participation */}
+      {event.status === "published" ? (
+        <section aria-label="Event participation" className="mt-10 flex flex-col gap-5 border border-line bg-surface p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="min-w-0">
+            <h2 className="font-display text-3xl">Take part.</h2>
+            <p className="mt-2 text-sm leading-7 text-muted">Manage your place in Your studio → My registrations.</p>
+          </div>
+          {event.price_cents === 0 ? (
+            <Link prefetch={false} href={`/events/${event.id}/participate`} className={primaryButtonClass}>Participate · Free</Link>
+          ) : (
+            <p role="status" className="text-sm text-muted">Paid event booking is not available yet.</p>
+          )}
+        </section>
+      ) : null}
       {coverUrl ? (
         <figure className="mt-8 lg:mt-12">
           <div className="flex items-center justify-center overflow-hidden border border-line bg-surface">

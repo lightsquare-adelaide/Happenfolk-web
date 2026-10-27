@@ -1,0 +1,13 @@
+Case ID,Priority,Area,Environment,Test account/device,Run date,Status,Expected,Actual,Evidence link,Bug ID,Notes
+QA-01,P0,Signup and onboarding,,,,Not run,Signup completes without exposing other accounts,,,,
+QA-02,P0,Logout access,,,,Not run,Dashboard requires login after signout,,,,
+QA-03,P0,Profile publication RLS,,,,Not run,Anonymous visitor cannot view private profile,,,,
+QA-04,P1,Profile duplicate handle and race,,,,Not run,Validation remains accurate and shows safe error,,,,
+QA-05,P0,Cross-account data isolation,,,,Not run,Second account cannot access private records,,,,
+QA-06,P1,Portfolio privacy,,,,Not run,Only published work appears publicly,,,,
+QA-07,P1,Media upload validation,,,,Not run,Invalid input rejected and private masters hidden,,,,
+QA-08,P1,Preview sample-data disclosure,,,,Not run,Preview does not claim sample events are production data,,,,
+QA-09,P0,Participate preview button,,,,Not run,Coming soon is documented as incomplete,,,,
+QA-10,P1,Follow and Collaborate preview,,,,Not run,Coming soon is documented as incomplete,,,,
+QA-11,P1,Mobile and keyboard accessibility,,,,Not run,Controls visible and keyboard accessible,,,,
+QA-12,P0,Registration after integration,,,,Blocked,Free registration unique and visible only to owner,,,,Requires deployed feature and approved test accounts

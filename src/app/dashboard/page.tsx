@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { secondaryButtonClass } from "@/components/field";
 import { BRAND } from "@/lib/brand";
-import { formatEventDate, orderEvents } from "@/lib/dashboard";
+import { formatEventDate, orderEvents, registrationStatusLabel } from "@/lib/dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard — " + BRAND.name };
@@ -20,17 +20,26 @@ export default async function DashboardPage() {
   if (profile == null || profile.category_id == null) redirect("/onboarding");
 
   // Management queries belong to this caller; RLS remains the boundary.
-  const [category, works, collaborations] = await Promise.all([
+  const [category, works, collaborations, registrations] = await Promise.all([
     supabase.from("categories").select("name").eq("id", profile.category_id).maybeSingle(),
     supabase.from("portfolio_items").select("id, title, published", { count: "exact" })
       .eq("profile_id", user.id).order("updated_at", { ascending: false }).limit(RECENT_LIMIT),
     supabase.from("event_collaborators").select("event_id").eq("profile_id", user.id),
+    // Tingxuan: the user's own registration state, with RLS as a second guard.
+    supabase.from("event_registrations")
+      .select("id, event_id, status", { count: "exact" })
+      .eq("member_id", user.id).order("created_at", { ascending: false }).limit(RECENT_LIMIT),
   ]);
   const eventIds = [...new Set((collaborations.data ?? []).map((row) => row.event_id))];
   const events = eventIds.length
     ? await supabase.from("events").select("id, title, status, starts_at").in("id", eventIds)
     : { data: [], error: null };
   const myEvents = orderEvents(events.data ?? [], new Date());
+  const registeredEventIds = [...new Set((registrations.data ?? []).map((row) => row.event_id))];
+  const registeredEvents = registeredEventIds.length
+    ? await supabase.from("events").select("id, title").in("id", registeredEventIds)
+    : { data: [], error: null };
+  const registeredTitles = new Map((registeredEvents.data ?? []).map((row) => [row.id, row.title]));
 
   return (
     <main className="shell-wrap py-10 lg:py-16">
@@ -74,6 +83,22 @@ export default async function DashboardPage() {
             <li key={event.id} className="min-w-0 py-4">
               <Link prefetch={false} href="/dashboard/events" className="break-words font-medium underline-offset-4 hover:underline">{event.title}</Link>
               <p className="mt-1 text-sm text-muted">{formatEventDate(event.starts_at)} · {event.status === "published" ? "Published" : event.status === "draft" ? "Draft" : "Cancelled"}</p>
+            </li>
+          ))}
+        </StudioSection>
+        {/* Tingxuan: Registration management in the team studio */}
+        <StudioSection title="Registrations" count={registrations.count}
+          failed={registrations.error != null || registeredEvents.error != null}
+          empty="Your next event is waiting."
+          hint="Find a free event and save your place. Manage or cancel registrations here."
+          action={{ href: "/dashboard/registrations", label: "My registrations" }}>
+          {(registrations.data ?? []).map((registration) => (
+            <li key={registration.id} className="min-w-0 py-4">
+              <Link prefetch={false} href="/dashboard/registrations"
+                className="break-words font-medium underline-offset-4 hover:underline">
+                {registeredTitles.get(registration.event_id) ?? "Event unavailable"}
+              </Link>
+              <p className="mt-1 text-sm text-muted">{registrationStatusLabel(registration.status)}</p>
             </li>
           ))}
         </StudioSection>
