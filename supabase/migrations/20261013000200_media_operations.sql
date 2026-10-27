@@ -1,9 +1,8 @@
--- Prevent writes while checking duplicates and adding uniqueness.
-lock table public.media_assets in share row exclusive mode;
-
--- Conflicting metadata requires manual review before any row is deleted.
+-- Check and deduplicate atomically before adding uniqueness.
 do $$
 begin
+  lock table public.media_assets in share row exclusive mode;
+
   if exists (
     select 1
     from public.media_assets a
@@ -20,19 +19,20 @@ begin
     raise exception 'Duplicate media assets have conflicting metadata'
       using hint = 'Review and reconcile duplicate rows before rerunning this migration.';
   end if;
+
+  -- Metadata matches; retain the earliest row.
+  delete from public.media_assets a using public.media_assets b
+  where a.portfolio_item_id = b.portfolio_item_id
+    and a.path = b.path
+    and a.bucket = b.bucket
+    and a.variant = b.variant
+    and (a.created_at, a.id) > (b.created_at, b.id);
+
+  create unique index media_assets_object_unique
+    on public.media_assets (portfolio_item_id, path, bucket, variant);
 end;
 $$;
 
--- Metadata now matches; keep the earliest row, using UUID to break ties.
-delete from public.media_assets a using public.media_assets b
-where a.portfolio_item_id = b.portfolio_item_id
-  and a.path = b.path
-  and a.bucket = b.bucket
-  and a.variant = b.variant
-  and (a.created_at, a.id) > (b.created_at, b.id);
-
-create unique index media_assets_object_unique
-  on public.media_assets (portfolio_item_id, path, bucket, variant);
 
 -- A short lease serializes storage transitions across application processes.
 -- Clients cannot read or write lease rows directly, including on older stacks
