@@ -5,6 +5,7 @@ import { secondaryButtonClass } from "@/components/field";
 import { BRAND } from "@/lib/brand";
 import { formatEventDate } from "@/lib/dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ViewTracker } from "@/components/view-tracker";
 
 type Context = { params: Promise<{ id: string }> };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,6 +48,7 @@ export default async function EventPage({ params }: Context) {
 
   return (
     <main className="shell-wrap py-8 lg:py-12">
+      {event.status === "published" ? <ViewTracker subjectType="event" subjectId={event.id} /> : null}
       <nav aria-label="Event navigation" className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <Link href="/events" className="py-2 text-sm underline underline-offset-4">All events</Link>
         {canEdit ? <Link prefetch={false} href="/dashboard/events" className={secondaryButtonClass}>Edit event</Link> : null}
