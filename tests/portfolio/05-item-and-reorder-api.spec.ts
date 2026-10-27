@@ -25,16 +25,20 @@ let strangerCookie = "";
 beforeAll(async () => {
   app = await startApp();
   owner = await createUser("portfolio-api-owner");
+  createdUsers.push(owner);
   stranger = await createUser("portfolio-api-stranger");
-  createdUsers.push(owner, stranger);
+  createdUsers.push(stranger);
   ownerCookie = await sessionCookieHeader(owner.email, owner.password);
   strangerCookie = await sessionCookieHeader(stranger.email, stranger.password);
 }, 600_000);
 
 afterAll(async () => {
-  await cleanupUsers(createdUsers);
-  if (app) await app.close();
-  app = null;
+  try {
+    await cleanupUsers(createdUsers);
+  } finally {
+    if (app) await app.close();
+    app = null;
+  }
 });
 
 const post = (cookie: string | undefined, body: unknown, opts: { raw?: string; origin?: string; secFetchSite?: string } = {}) =>

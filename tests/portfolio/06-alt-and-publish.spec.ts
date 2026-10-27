@@ -17,6 +17,7 @@ import { cleanupUsers } from "./_harness";
 
 let app: { close: () => Promise<void> } | null = null;
 let fixtures: FixtureSet;
+const createdUsers: TestUser[] = [];
 let owner: TestUser;
 let stranger: TestUser;
 let ownerCookie = "";
@@ -26,16 +27,24 @@ beforeAll(async () => {
   app = await startApp();
   fixtures = await buildFixtures();
   owner = await createUser("portfolio-alt-owner");
+  createdUsers.push(owner);
   stranger = await createUser("portfolio-alt-stranger");
+  createdUsers.push(stranger);
   ownerCookie = await sessionCookieHeader(owner.email, owner.password);
   strangerCookie = await sessionCookieHeader(stranger.email, stranger.password);
 }, 600_000);
 
 afterAll(async () => {
-  await cleanupUsers([owner, stranger]);
-  if (fixtures) await cleanupFixtures(fixtures.dir);
-  if (app) await app.close();
-  app = null;
+  try {
+    await cleanupUsers(createdUsers);
+  } finally {
+    try {
+      if (fixtures) await cleanupFixtures(fixtures.dir);
+    } finally {
+      if (app) await app.close();
+      app = null;
+    }
+  }
 });
 
 type UploadBody = { ok?: boolean; itemId?: string; assetId?: string; error?: string };
