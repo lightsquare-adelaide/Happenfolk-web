@@ -4,10 +4,15 @@ import {
   DISCOVERY_LIMIT_MAX,
   DISCOVERY_LIMIT_MIN,
   DISCOVERY_QUERY_MAX_BYTES,
+  artistsHref,
   clampDiscoveryLimit,
+  discoverHref,
   discoveryQueryByteLength,
+  initials,
   normalizeDiscoveryCategory,
   normalizeDiscoveryQuery,
+  parseDiscoverParams,
+  parsePage,
   validateDiscoveryQuery,
 } from "./discovery";
 
@@ -99,5 +104,61 @@ describe("normalizeDiscoveryCategory", () => {
     expect(normalizeDiscoveryCategory(-3)).toBeNull();
     expect(normalizeDiscoveryCategory(1.5)).toBeNull();
     expect(normalizeDiscoveryCategory(99999)).toBeNull();
+  });
+});
+
+describe("parseDiscoverParams", () => {
+  it("reads q and category, trimming and coercing", () => {
+    expect(parseDiscoverParams({ q: "  clay  ", category: "3" })).toEqual({
+      query: "clay",
+      queryTooLong: false,
+      categoryId: 3,
+    });
+  });
+
+  it("treats blank, repeated and garbage values as browse mode", () => {
+    expect(parseDiscoverParams({ q: "   ", category: "abc" })).toEqual({
+      query: null,
+      queryTooLong: false,
+      categoryId: null,
+    });
+    expect(parseDiscoverParams({ q: ["a", "b"] }).query).toBe("a");
+  });
+
+  it("flags over-long queries and drops them", () => {
+    const result = parseDiscoverParams({ q: "x".repeat(201) });
+    expect(result.queryTooLong).toBe(true);
+    expect(result.query).toBeNull();
+  });
+});
+
+describe("href builders", () => {
+  it("omit empty parts and encode the query", () => {
+    expect(discoverHref(null, null)).toBe("/discover");
+    expect(discoverHref("blue & red", 2)).toBe("/discover?q=blue+%26+red&category=2");
+    expect(discoverHref(null, 5)).toBe("/discover?category=5");
+    expect(artistsHref(null)).toBe("/artists");
+    expect(artistsHref(4, 2)).toBe("/artists?category=4&page=2");
+    expect(artistsHref(null, 1)).toBe("/artists");
+  });
+});
+
+describe("parsePage", () => {
+  it("falls back to 1 for anything unusable", () => {
+    expect(parsePage(undefined)).toBe(1);
+    expect(parsePage("0")).toBe(1);
+    expect(parsePage("-3")).toBe(1);
+    expect(parsePage("2.5")).toBe(1);
+    expect(parsePage("99999")).toBe(1);
+    expect(parsePage("3")).toBe(3);
+  });
+});
+
+describe("initials", () => {
+  it("builds one or two capitals", () => {
+    expect(initials("Mara Quinn")).toBe("MQ");
+    expect(initials("cher")).toBe("CH");
+    expect(initials("  ")).toBe("?");
+    expect(initials(null)).toBe("?");
   });
 });

@@ -69,3 +69,65 @@ export function normalizeDiscoveryCategory(value: unknown): number | null {
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 32767) return null;
   return parsed;
 }
+
+// ---------------------------------------------------------------------------
+// Page-level helpers shared by /, /artists and /discover.
+// ---------------------------------------------------------------------------
+
+type RawParam = string | string[] | undefined;
+
+function firstParam(value: RawParam): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export type DiscoverParams = {
+  /** Normalized query; null means browse mode. */
+  query: string | null;
+  /** True when the raw query was rejected as too long (and is dropped). */
+  queryTooLong: boolean;
+  /** Category id, or null for every category. */
+  categoryId: number | null;
+};
+
+/** Reads ?q= and ?category= defensively; garbage degrades to browse mode. */
+export function parseDiscoverParams(params: Record<string, RawParam>): DiscoverParams {
+  const validation = validateDiscoveryQuery(firstParam(params.q));
+  return {
+    query: validation.ok ? validation.query : null,
+    queryTooLong: !validation.ok,
+    categoryId: normalizeDiscoveryCategory(firstParam(params.category)),
+  };
+}
+
+/** Canonical /discover URL for a query and category (omits empty parts). */
+export function discoverHref(query: string | null, categoryId: number | null): string {
+  const search = new URLSearchParams();
+  if (query) search.set("q", query);
+  if (categoryId !== null) search.set("category", String(categoryId));
+  const text = search.toString();
+  return text ? `/discover?${text}` : "/discover";
+}
+
+/** Canonical /artists URL; page 1 is the bare URL. */
+export function artistsHref(categoryId: number | null, page = 1): string {
+  const search = new URLSearchParams();
+  if (categoryId !== null) search.set("category", String(categoryId));
+  if (page > 1) search.set("page", String(page));
+  const text = search.toString();
+  return text ? `/artists?${text}` : "/artists";
+}
+
+/** 1-based page number from ?page=; anything unusable is page 1. */
+export function parsePage(value: RawParam): number {
+  const parsed = Number(firstParam(value));
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 1000) return 1;
+  return parsed;
+}
+
+/** Up to two capital letters for an avatar placeholder; "?" when empty. */
+export function initials(name: string | null | undefined): string {
+  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  const letters = words.length === 1 ? [...words[0]].slice(0, 2) : words.slice(0, 2).map((w) => [...w][0]);
+  return letters.join("").toUpperCase();
+}
