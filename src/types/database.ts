@@ -713,6 +713,7 @@ export type Database = {
           handle: string | null
           id: string | null
           published_items: number | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -738,6 +739,7 @@ export type Database = {
           price_cents: number | null
           starts_at: string | null
           title: string | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -779,6 +781,7 @@ export type Database = {
           handle: string | null
           id: string | null
           published_items: number | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -799,6 +802,7 @@ export type Database = {
           price_cents: number | null
           starts_at: string | null
           title: string | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -888,6 +892,37 @@ export type Database = {
       reorder_media: {
         Args: { p_asset_id: string; p_direction: string; p_item_id: string }
         Returns: boolean
+      }
+      search_artists: {
+        Args: { p_category_id?: number; p_limit?: number; p_query: string }
+        Returns: {
+          avatar_path: string
+          category_id: number
+          display_name: string
+          handle: string
+          id: string
+        }[]
+      }
+      search_events: {
+        Args: { p_category_id?: number; p_limit?: number; p_query: string }
+        Returns: {
+          category_id: number
+          cover_path: string
+          id: string
+          location: string
+          price_cents: number
+          starts_at: string
+          title: string
+        }[]
+      }
+      search_items: {
+        Args: { p_category_id?: number; p_limit?: number; p_query: string }
+        Returns: {
+          category_id: number
+          id: string
+          profile_id: string
+          title: string
+        }[]
       }
       set_payment_stub_force_fail: {
         Args: { p_force_fail: boolean }

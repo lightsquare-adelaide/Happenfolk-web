@@ -109,6 +109,9 @@ jobs:
       - name: Portfolio ordering and metadata integration (real stack)
         run: npm run test:portfolio
 
+      - name: Discovery ranking and search integration (real stack)
+        run: npm run test:discovery
+
   database:
     name: Migrations lint
     runs-on: ubuntu-latest

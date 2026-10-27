@@ -1,0 +1,158 @@
+# Discovery: trending, recommendations and search (S1)
+
+This document describes the database rules behind the public discovery
+surfaces — the anonymous homepage (global trending artists and events)
+and the category-filtered, searchable directory. Everything here is
+implemented in one migration,
+`supabase/migrations/20261027000100_discovery_trending_search.sql`,
+ported selectively from the personal-version
+`0020_discovery_trending_recommendations.sql` and fixed for two defects
+found during review (see below).
+
+## Trending score
+
+`trending_events` and `trending_artists` rank published subjects by a
+time-decayed 7-day view score:
+
+```
+trending_score = Σ exp(-λ · age_days)   over page_views in the last 7 days
+λ = ln(2) / 2                           (48-hour half-life)
+```
+
+A view from an hour ago counts ~0.99, a day ago ~0.71, six days ago
+~0.125. The window edge is not a cliff (a week-old view still carries
+~9% weight) while a fresh spike visibly outranks last week's plateau.
+Raw counts (`view_count`) are kept alongside for display, but ordering
+is by score.
+
+Ordering is deterministic: `trending_score desc, view_count desc`, then
+a stable natural key (`starts_at` for events, `handle` for artists),
+then the row `id`. Repeated reads return the identical sequence.
+
+Only published subjects appear: events must have
+`status = 'published'`, artists must have `profiles.published`. Draft
+and cancelled events are invisible to discovery no matter how many
+views they carry.
+
+### Artist aggregate independence (ported defect, fixed)
+
+The personal-version `trending_artists` joined `page_views` and
+published `portfolio_items` in a single aggregate, multiplying every
+profile view row by the artist's item count — publishing a new work
+silently doubled the artist's `view_count` and score with the view rows
+untouched. The team version computes the two aggregates in independent
+lateral subqueries:
+
+- `view_count` / `trending_score` count **profile-subject views only**
+  (portfolio-item views never inflate the artist's numbers);
+- `published_items` counts published works only.
+
+`tests/discovery/02-artist-aggregate.spec.ts` pins this: with fixed
+page-view fixtures, publishing another work changes `published_items`
+only, never `view_count` or `trending_score`.
+
+## Recommendations
+
+`recommended_events` / `recommended_artists` (security-invoker views,
+per 0009) rerank the trending score multiplicatively:
+
+```
+rank_key = trending_score × (1 + 2 × affinity)
+```
+
+where `affinity` comes from `category_affinity` joined on
+`member_id = auth.uid()` — the identity is always the caller's own; no
+parameter can select somebody else's affinity. The 0009 lexicographic
+order (affinity first) let any single like steam-roll every other
+category; the multiplier keeps global momentum dominant and lifts the
+liked category proportionally.
+
+The tiebreak chain is byte-identical to the trending views', so a cold
+start (no likes, no member views ⇒ affinity 0 ⇒ multiplier exactly 1)
+yields the global trending sequence item for item. Anonymous callers
+(`auth.uid()` is null) also see exactly the global order.
+
+## Search RPCs
+
+Three SECURITY INVOKER functions, callable by `anon` and
+`authenticated`, sit on top of the `search_vector` columns and GIN
+indexes maintained since 0003–0006:
+
+| RPC | Matches on | Visibility |
+|---|---|---|
+| `search_events(text, smallint, integer)` | title/description FTS + trigram title | `status = 'published'` |
+| `search_artists(text, smallint, integer)` | name/handle/bio FTS + trigram name & handle | `profiles.published` |
+| `search_items(text, smallint, integer)` | title/description FTS + trigram title | `pi.published` **and owner `p.published`** |
+
+Matching is `websearch_to_tsquery` (total — malformed operator soup
+never raises) OR `pg_trgm` similarity above 0.3 (survives one or two
+typos). Ranking: FTS `ts_rank`, then trigram similarity, then a
+deterministic natural key. An empty/whitespace query skips the text
+filter, so pure category browsing works.
+
+Item discovery additionally requires the **owning profile** to be
+published: a private artist's published works are not discoverable by
+anyone — not by anonymous callers (RLS would already hide the profile
+row), and not by the owner browsing discovery (RLS alone would show
+it; the explicit predicate closes that shortcut). Previewing your own
+drafts belongs to the dashboard, not discovery.
+
+### Input bounds
+
+- `p_query`: trimmed; empty → browse mode. Over **200 bytes**
+  (`octet_length`, UTF-8 bytes not characters) raises `QUERY_TOO_LONG`.
+- `p_limit`: clamped to `1..100`, default `24`, null → default.
+- `p_category_id`: `smallint` or null (all categories); an unknown id
+  simply matches nothing.
+
+`src/lib/discovery.ts` mirrors these bounds in TypeScript (DB-free unit
+tests in `src/lib/discovery.spec.ts`) so the API layer can reject bad
+input before it reaches Postgres, while the RPCs stay independently
+safe against direct callers.
+
+## What this migration deliberately does NOT change
+
+- `record_page_view`, `page_view_dedupe_window()`,
+  `page_view_visitor_hash()`, the 30-minute per-identity dedupe, the
+  transaction advisory lock and every grant from 0006 /
+  20261026000600 stay exactly as they are. The personal-version
+  recorder (member-day dedupe + anonymous global velocity cap) would
+  have erased F's per-identity dedupe and is **not** ported.
+- No purge/retention helper is imported.
+- No raw `page_views` row, hash or timestamp is exposed anywhere;
+  `page_views` keeps its zero-policy deny-all RLS (0007).
+- Existing view columns keep their names, positions and types;
+  `trending_score` (`float8`) is appended last, and grants from
+  20261013000100 are preserved by `CREATE OR REPLACE`.
+
+## Tests
+
+Real-stack suite (local Supabase, serial):
+
+```
+npm run test:discovery          # tests/discovery, --no-file-parallelism
+```
+
+- `01-trending-decay` — recent-vs-old ranking from fixed timestamps,
+  7-day window edge, cancelled/draft/private exclusion, deterministic
+  ties, read stability.
+- `02-artist-aggregate` — the join-multiplication regression.
+- `03-recommendations` — cold start equals global trending; likes
+  rerank only the liker; multiplicative (not lexicographic) affinity.
+- `04-search` — FTS/trigram matching, empty/no-result/malformed
+  queries, category filters, private-owner exclusion, limit clamping,
+  `QUERY_TOO_LONG` byte budget, whitespace trimming.
+
+Red-green guards (same convention as `tests/access`, via
+`DISCOVERY_RED=<name>`; each red run must fail the guarded spec and the
+guard restores itself afterwards):
+
+| Guard | Breaks | Caught by |
+|---|---|---|
+| `score-decay-off` | score degenerates to raw count | 01 |
+| `artist-join-multiply` | restores the personal-version join defect | 02 |
+| `affinity-off` | rerank reduced to pure trending | 03 |
+| `search-owner-blind` | `search_items` forgets the owner-profile predicate | 04 |
+
+CI runs `test:discovery` in the integration job after `test:portfolio`;
+the suite is excluded from plain `npm test` (it needs the local stack).
