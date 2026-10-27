@@ -35,7 +35,7 @@ export default async function MediaPage() {
           <PortfolioManager
             initial={managed.works}
             heading="Media management"
-            intro="Upload media to your works, describe each file, arrange the order and publish when a work is ready. This page and the portfolio manager are the same tool."
+            intro="Add media to your works, describe each file, arrange the order and publish when a work is ready."
             handle={managed.handle}
             profilePublished={managed.profilePublished}
           />

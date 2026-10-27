@@ -44,7 +44,7 @@ function splitTags(raw: string): string[] {
  * ordering, publish/unpublish and whole-work deletion.
  *
  * Refresh correctness: the list renders the SERVER props directly (no
- * useState(initial) copy), every mutation ends in router.refresh(), and
+ * useState(initial) copy), HTTP responses resync server state, and
  * each card REMOUNTS on a key that includes the media stamp — uploads,
  * caption edits and media reorders do not necessarily bump the item's
  * updated_at, so the stamp carries media id/position/alt. Signed URL
@@ -555,7 +555,7 @@ function WorkCard(props: CardProps) {
 
       <section className="flex min-w-0 flex-col gap-3 border-t border-line pt-5" aria-label={`Media management for ${work.title}`}>
         <h4 className="text-xs uppercase tracking-wider text-muted">
-          Media ({work.assets.length}) — private drafts, shown with signed previews
+          Media ({work.assets.length}) — your originals stay private
         </h4>
 
         {work.assets.length === 0 ? (
@@ -613,7 +613,7 @@ function WorkCard(props: CardProps) {
           >
             <span className="font-medium">Drag files here, or press Enter to choose</span>
             <span className="text-sm text-muted">
-              JPG / PNG / WebP / MP4 (H.264), up to 4 MiB each. Files upload one by one; the type is judged from file content, not the extension.
+              JPG / PNG / WebP / MP4 (H.264), up to 4 MiB each. Files upload one at a time.
             </span>
             <input
               ref={inputRef}
