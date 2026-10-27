@@ -2,31 +2,45 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BRAND } from "@/lib/brand";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { MediaPanel, type PanelItem } from "@/components/media-panel";
+import { FormAlert } from "@/components/form-alert";
+import { loadManagedPortfolio } from "../portfolio/load-managed-portfolio";
+import { PortfolioManager } from "../portfolio/portfolio-manager";
 
 export const metadata = { title: `Media management — ${BRAND.name}` };
 
+/**
+ * Compatibility entry: /dashboard/media renders the SAME portfolio
+ * manager as /dashboard/portfolio (one shared UI, no duplicate
+ * conflicting manager), under its historical heading. Uploads,
+ * captions, ordering and publication all live in that one component.
+ */
 export default async function MediaPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: works, error } = await supabase.from("portfolio_items")
-    .select("id, title, media_kind, published").eq("profile_id", user.id).order("created_at");
-  const ids = (works ?? []).map(row => row.id);
-  const media = ids.length ? await supabase.from("media_assets")
-    .select("id, portfolio_item_id, path, alt_text, content_type, width, height, position")
-    .in("portfolio_item_id", ids).eq("bucket", "drafts").eq("variant", "original")
-    .order("position").order("created_at") : { data: [], error: null };
-  const items: PanelItem[] = (works ?? []).map(work => ({
-    id: work.id, title: work.title, mediaKind: work.media_kind, published: work.published,
-    assets: (media.data ?? []).filter(asset => asset.portfolio_item_id === work.id).map(asset => ({
-      id: asset.id, path: asset.path, altText: asset.alt_text, contentType: asset.content_type,
-      width: asset.width, height: asset.height, position: asset.position,
-    })),
-  }));
-  return <main className="shell-wrap flex flex-col gap-6 py-10">
-    <header><h1 className="text-2xl font-semibold">Media management</h1>
-      <Link href="/dashboard" className="text-brand-700 underline">Back to dashboard</Link></header>
-    {error || media.error ? <p role="alert">Could not load your media. Please try again.</p> : <MediaPanel items={items} />}
-  </main>;
+
+  const managed = await loadManagedPortfolio(supabase, user.id);
+
+  return (
+    <main className="shell-wrap py-10 lg:py-16">
+      <Link prefetch={false} href="/dashboard" className="text-sm underline underline-offset-4">
+        Back to your studio
+      </Link>
+      <div className="mt-7">
+        {managed.failed ? (
+          <FormAlert tone="danger">Could not load your media. Please try again.</FormAlert>
+        ) : (
+          <PortfolioManager
+            initial={managed.works}
+            heading="Media management"
+            intro="Upload media to your works, describe each file, arrange the order and publish when a work is ready. This page and the portfolio manager are the same tool."
+            handle={managed.handle}
+            profilePublished={managed.profilePublished}
+          />
+        )}
+      </div>
+    </main>
+  );
 }
