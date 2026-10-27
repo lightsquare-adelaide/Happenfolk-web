@@ -82,6 +82,9 @@ export default async function DashboardPage() {
           <Link href="/dashboard/profile" className="text-brand-700 underline">
             Edit profile
           </Link>
+          <Link href="/dashboard/registrations" className="text-brand-700 underline">
+            My registrations
+          </Link>
           <Link href={`/artists/${profile.handle}`} className="text-brand-700 underline">
             {profile.published ? "View public page" : "Preview public page"}
           </Link>
