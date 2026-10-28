@@ -243,6 +243,7 @@ export type Database = {
           host_id: string
           id: string
           location: string | null
+          open_to_collaborate: boolean
           price_cents: number
           search_vector: unknown
           starts_at: string
@@ -260,6 +261,7 @@ export type Database = {
           host_id: string
           id?: string
           location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at: string
@@ -277,6 +279,7 @@ export type Database = {
           host_id?: string
           id?: string
           location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at?: string
