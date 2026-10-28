@@ -11,7 +11,7 @@ import {
 import { stackConfig } from "../access/_harness";
 
 const migration = readFileSync(
-  "supabase/migrations/20261013000200_media_operations.sql",
+  "supabase/migrations/20261028000600_media_duplicate_metadata.sql",
   "utf8",
 );
 const block = migration.match(/do \$\$[\s\S]*?\$\$;/i)?.[0];

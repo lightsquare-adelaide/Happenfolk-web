@@ -1,38 +1,10 @@
--- Check and deduplicate atomically before adding uniqueness.
-do $$
-begin
-  lock table public.media_assets in share row exclusive mode;
-
-  if exists (
-    select 1
-    from public.media_assets a
-    join public.media_assets b
-      on a.portfolio_item_id = b.portfolio_item_id
-      and a.path = b.path
-      and a.bucket = b.bucket
-      and a.variant = b.variant
-      and a.id < b.id
-    where (a.alt_text, a.content_type, a.width, a.height, a.position)
-      is distinct from
-      (b.alt_text, b.content_type, b.width, b.height, b.position)
-  ) then
-    raise exception 'Duplicate media assets have conflicting metadata'
-      using hint = 'Review and reconcile duplicate rows before rerunning this migration.';
-  end if;
-
-  -- Metadata matches; retain the earliest row.
-  delete from public.media_assets a using public.media_assets b
-  where a.portfolio_item_id = b.portfolio_item_id
-    and a.path = b.path
-    and a.bucket = b.bucket
-    and a.variant = b.variant
-    and (a.created_at, a.id) > (b.created_at, b.id);
-
-  create unique index media_assets_object_unique
-    on public.media_assets (portfolio_item_id, path, bucket, variant);
-end;
-$$;
-
+-- Uniqueness makes storage upserts and asset rows share the same retry key.
+-- Preserve one existing row if an earlier upload implementation duplicated it.
+delete from public.media_assets a using public.media_assets b
+where a.portfolio_item_id = b.portfolio_item_id and a.path = b.path
+  and a.bucket = b.bucket and a.variant = b.variant and a.id > b.id;
+create unique index media_assets_object_unique
+  on public.media_assets (portfolio_item_id, path, bucket, variant);
 
 -- A short lease serializes storage transitions across application processes.
 -- Clients cannot read or write lease rows directly, including on older stacks
@@ -93,55 +65,14 @@ begin
     order by position, created_at, id limit 1;
   end if;
   if not found then return false; end if;
-    -- Assign distinct positions, then swap the selected adjacent assets.
-  -- Update every original and its public variants together.
-  with ranked as (
-    select
-      id,
-      path,
-      (row_number() over (
-        order by position, created_at, id
-      ) - 1)::integer as slot
-    from public.media_assets
-    where portfolio_item_id = p_item_id
-      and bucket = 'drafts'
-      and variant = 'original'
-  ),
-  moves as (
-    select
-      r.id,
-      r.path,
-      case
-        when r.id = current_row.id then
-          (select slot from ranked where id = neighbor.id)
-        when r.id = neighbor.id then
-          (select slot from ranked where id = current_row.id)
-        else r.slot
-      end as next_position
-    from ranked r
-  )
-  update public.media_assets as asset
-  set position = moves.next_position
-  from moves
-  where asset.portfolio_item_id = p_item_id
-    and (
-      (
-        asset.bucket = 'drafts'
-        and asset.variant = 'original'
-        and asset.id = moves.id
-      )
-      or (
-        asset.bucket = 'media'
-        and asset.variant in ('small', 'medium', 'display')
-        and asset.path =
-          regexp_replace(moves.path, '\.[^./]+$', '')
-          || '-' || asset.variant
-          || case
-            when asset.variant = 'display' then '.mp4'
-            else '.webp'
-          end
-      )
-    );
+  update public.media_assets set position = case
+    when path = current_row.path or path like left(current_row.path, length(current_row.path) - length(split_part(current_row.path, '.', -1)) - 1) || '-%' then neighbor.position
+    else current_row.position end
+  where portfolio_item_id = p_item_id and (
+    path = current_row.path or path = neighbor.path or
+    path like left(current_row.path, length(current_row.path) - length(split_part(current_row.path, '.', -1)) - 1) || '-%' or
+    path like left(neighbor.path, length(neighbor.path) - length(split_part(neighbor.path, '.', -1)) - 1) || '-%'
+  );
   return true;
 end; $$;
 
