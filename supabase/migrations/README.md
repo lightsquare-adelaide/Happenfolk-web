@@ -1,15 +1,14 @@
-# Migration numbering
+# Migration sequencing
 
-| Migration | PR | Purpose |
+Existing migration files are immutable. Add timestamped migrations after the stack head.
+
+| Migration | Source | Purpose |
 |---|---|---|
-| 0012 | #6 | Reserved |
-| 0013 | #9 | Reserved |
-| 0014 | #16 | Add `events.open_to_collaborate` |
-| 0015 | #16 | Public collaborators on published events |
-| 0016 | #19 | Add headline, location, and website to profiles |
+| 20261028000100 | Ziang #16, formerly 0014 | Event collaboration availability |
+| 20261028000200 | Ziang #16, formerly 0015 | Public collaborators on published events |
+| 20261028000300 | Ziang #19, formerly 0016 | Profile headline, location and website |
+| 20261028000400 | Stack integration | Grant updates on collaboration availability |
+| 20261028000500 | Ziang #20 | Repair tied media ordering |
+| 20261028000600 | Ziang #20 | Atomic metadata-preserving media deduplication |
 
-Next available migration number: **0017**.
-
-Before creating a migration, check this register and update it to avoid duplicate numbers.
-- No database CHECK constraints will be added to `display_name` or `bio` until their length limits are confirmed.
-- `contact_email` is deferred until its visibility and access rules are agreed. It is not included in this migration.
+The three schema migrations were renamed without changing their SQL. The media fixes run after the existing stack migrations. Contact email remains outside this package.
