@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const subjectType = body?.subjectType as string | undefined;
+  const subjectType = typeof body?.subjectType === "string" ? body.subjectType : "";
   const subjectId = typeof body?.subjectId === "string" ? body.subjectId : "";
   const fields =
     body?.fields && typeof body.fields === "object" && !Array.isArray(body.fields)
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     portfolio_item: ["title", "description"],
     event: ["title", "description", "location"],
   };
-  const allowed = allowedFields[subjectType];
+  const allowed = Object.hasOwn(allowedFields, subjectType) ? allowedFields[subjectType] : undefined;
   if (!allowed || Object.keys(fields).length === 0 || Object.entries(fields).some(
     ([key, value]) => !allowed.includes(key) || (value !== null && typeof value !== "string"),
   )) {

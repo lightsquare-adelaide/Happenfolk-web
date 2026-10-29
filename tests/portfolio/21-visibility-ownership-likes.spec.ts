@@ -107,6 +107,15 @@ describe("Task B public work details, likes and staff endpoints on the real serv
     expect((await fetch(`${taskBase}/items/${itemId}`)).status).toBe(200);
   });
 
+  it("rejects unsupported admin subject types with a client error", async () => {
+    for (const subjectType of ["unknown", "constructor", "toString", "__proto__", null, 42, {}, []]) {
+      const response = await post("/api/admin/update", staffCookie, {
+        subjectType, subjectId: itemId, fields: { title: "Invalid target" },
+      });
+      expect(response.status, String(subjectType)).toBe(400);
+    }
+  });
+
   it("rejects work whose owner is unpublished or hidden, including metadata and likes", async () => {
     for (const patch of [{ published: false }, { published: true, is_hidden: true }]) {
       await withPg(async (db) => {
