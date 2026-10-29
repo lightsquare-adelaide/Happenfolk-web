@@ -12,7 +12,7 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const [{ data: profile }, { data: categories }] = await Promise.all([
-    supabase.from("profiles").select("handle, display_name, account_kind, category_id, bio, published, avatar_path").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("handle, display_name, account_kind, category_id, bio, contact_email, open_to_collaborate, published, avatar_path").eq("id", user.id).maybeSingle(),
     supabase.from("categories").select("id, name").order("sort_order"),
   ]);
   if (profile == null || profile.category_id == null) redirect("/onboarding");

@@ -82,8 +82,11 @@ export function ArtistTile({ artist, category, eager = false }: {
 export function WorkTile({ work, className = "", eager = false }: {
   work: WorkCardData; className?: string; eager?: boolean;
 }) {
+  const href = /^[0-9a-f-]{36}$/i.test(work.id)
+    ? `/items/${encodeURIComponent(work.id)}`
+    : `/artists/${encodeURIComponent(work.artistHandle)}`;
   return (
-    <Link prefetch={false} href={`/artists/${encodeURIComponent(work.artistHandle)}`}
+    <Link prefetch={false} href={href}
       className={`group block min-w-0 outline-offset-4 ${className}`}>
       <div className="flex aspect-[4/5] items-center justify-center overflow-hidden border border-line bg-tint">
         {work.coverUrl ? (

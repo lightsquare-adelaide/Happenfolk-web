@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { BRAND } from "@/lib/brand";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
+import { LikeButton } from "@/components/like-button";
 import { publicDisplayAssets, type MediaRow } from "@/lib/portfolio";
 import { PortfolioGallery } from "@/components/portfolio-gallery";
 import { ViewTracker, WorkViewTracker } from "@/components/view-tracker";
@@ -19,7 +20,7 @@ const getProfile = cache(async (handle: string) => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, handle, display_name, account_kind, bio, published, category_id, avatar_path")
+    .select("id, handle, display_name, account_kind, bio, contact_email, open_to_collaborate, published, category_id, avatar_path")
     .eq("handle", handle)
     .maybeSingle();
   if (error) throw new Error("Could not load this artist profile");
@@ -80,7 +81,27 @@ export default async function ArtistPage({ params }: Params) {
   const isOwner = user?.id === profile.id;
   const avatarUrl = profile.avatar_path
     ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl : null;
-  const works = await getWorks(profile.id);
+  const [works, { data: likeRow }, { data: ownLike }] = await Promise.all([
+    getWorks(profile.id),
+    supabase
+      .from("like_counts")
+      .select("like_count")
+      .eq("subject_type", "profile")
+      .eq("subject_id", profile.id)
+      .maybeSingle(),
+    user
+      ? supabase
+          .from("interactions")
+          .select("id")
+          .eq("member_id", user.id)
+          .eq("subject_type", "profile")
+          .eq("subject_id", profile.id)
+          .eq("kind", "like")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const likeCount = Number(likeRow?.like_count ?? 0);
+  const initialLiked = Boolean(ownLike);
 
   return (
     <main className="shell-wrap py-10 lg:py-16">
@@ -98,6 +119,33 @@ export default async function ArtistPage({ params }: Params) {
           ].filter(Boolean).join(" · ")}</p>
           <h1 className="break-words font-display text-5xl leading-[1.05] tracking-tight md:text-[64px]">{profile.display_name}</h1>
           <p className="mt-4 break-all text-sm text-muted">{"@" + profile.handle}</p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            {profile.open_to_collaborate ? (
+              <Link
+                href="/collaborate"
+                className="inline-flex min-h-11 items-center border border-brand bg-brand/10 px-3 py-1 font-mono text-xs uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-brand hover:text-on-brand"
+              >
+                Open to collaboration
+              </Link>
+            ) : null}
+            {profile.contact_email ? (
+              <a
+                href={`mailto:${profile.contact_email}`}
+                className="inline-flex min-h-11 items-center border border-line bg-surface px-3 py-1 font-mono text-xs text-foreground underline-offset-4 hover:border-foreground hover:underline"
+              >
+                {profile.contact_email}
+              </a>
+            ) : null}
+            {profile.published ? (
+              <LikeButton
+                subjectType="profile"
+                subjectId={profile.id}
+                initialCount={likeCount}
+                initialLiked={initialLiked}
+                label="Like artist"
+              />
+            ) : null}
+          </div>
         </div>
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- public artist avatar
@@ -131,7 +179,11 @@ export default async function ArtistPage({ params }: Params) {
                   </div>
                 )}
                 <div className="mt-4 flex min-w-0 items-start justify-between gap-4">
-                  <h3 className="break-words font-sans text-xl font-medium">{work.title}</h3>
+                  <h3 className="break-words font-sans text-xl font-medium">
+                    <Link href={`/items/${encodeURIComponent(work.id)}`} className="underline-offset-4 hover:underline">
+                      {work.title}
+                    </Link>
+                  </h3>
                   {!work.published ? <span className="shrink-0 text-xs leading-7 text-muted">Draft · only you</span> : null}
                 </div>
                 {work.description ? <p className="mt-2 max-w-[60ch] whitespace-pre-line break-words text-sm leading-7 text-muted">{work.description}</p> : null}

@@ -47,9 +47,13 @@ function Wall({ works }: { works: WorkCardData[] }) {
   const [lead, ...rest] = works;
   return (
     <ul className={`grid min-w-0 gap-3 ${rest.length ? "grid-cols-2" : "grid-cols-1"} aspect-[4/3] lg:aspect-[5/6]`}>
-      {[lead, ...rest].map((work, index) => (
+      {[lead, ...rest].map((work, index) => {
+        const href = /^[0-9a-f-]{36}$/i.test(work.id)
+          ? `/items/${encodeURIComponent(work.id)}`
+          : `/artists/${encodeURIComponent(work.artistHandle)}`;
+        return (
         <li key={work.id} className={`relative min-w-0 overflow-hidden border border-line bg-tint ${index === 0 && rest.length ? "row-span-2" : ""}`}>
-          <Link prefetch={false} href={`/artists/${encodeURIComponent(work.artistHandle)}`} className="group block h-full outline-offset-4">
+          <Link prefetch={false} href={href} className="group block h-full outline-offset-4">
             {/* eslint-disable-next-line @next/next/no-img-element -- public portfolio cover */}
             <img src={work.coverUrl!} alt={work.alt} width={work.width ?? 800} height={work.height ?? 1000}
               loading="eager" fetchPriority={index === 0 ? "high" : "auto"} decoding="async"
@@ -60,7 +64,8 @@ function Wall({ works }: { works: WorkCardData[] }) {
             </span>
           </Link>
         </li>
-      ))}
+      );
+      })}
     </ul>
   );
 }
