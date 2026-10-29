@@ -53,7 +53,8 @@ export function ArtistTile({ artist, category, eager = false }: {
   artist: ArtistCardData; category?: string; eager?: boolean;
 }) {
   return (
-    <Link prefetch={false} href={`/artists/${encodeURIComponent(artist.handle)}`} aria-label={`View ${artist.displayName}'s profile`} className="group block min-w-0 outline-offset-4">
+    <Link prefetch={false} href={`/artists/${encodeURIComponent(artist.handle)}`} className="group block min-w-0 outline-offset-4">
+      <span className="sr-only">View artist profile: </span>
       <div className="relative flex aspect-square items-center justify-center overflow-hidden border border-line bg-tint">
         {artist.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- public artist avatar
