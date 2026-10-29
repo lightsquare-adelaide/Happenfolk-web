@@ -12,9 +12,7 @@ const footerLinkClass =
  * own auth lookup: getCurrentAccount() is cached per request and already ran
  * for the header.
  *
- * Legal, privacy, licence and credits links belong to the launch-readiness
- * package, which owns those routes. They are not linked here yet, because a
- * footer link to a route that does not exist is worse than no link.
+ * Public information and legal routes are shared across the site.
  */
 export async function SiteFooter() {
   const account = await getCurrentAccount();
@@ -22,7 +20,7 @@ export async function SiteFooter() {
 
   return (
     <footer className="mt-auto border-t border-line bg-surface">
-      <div className="shell-wrap grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]">
+      <div className="shell-wrap grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
         <div className="flex flex-col gap-3">
           <span className="flex items-center gap-2 text-foreground">
             <BrandMark className="h-5 w-5" />
@@ -45,6 +43,9 @@ export async function SiteFooter() {
               {item.label}
             </Link>
           ))}
+          <Link href="/collaborate" prefetch={false} className={footerLinkClass}>
+            Collaborate
+          </Link>
         </nav>
 
         <nav aria-label="Account" className="flex flex-col">
@@ -82,6 +83,17 @@ export async function SiteFooter() {
               </Link>
             </>
           )}
+        </nav>
+
+        <nav aria-label="About and policies" className="flex flex-col">
+          <h2 className="mb-2 font-sans text-xs font-semibold uppercase tracking-wide text-foreground">
+            About and policies
+          </h2>
+          <Link href="/about" className={footerLinkClass}>About</Link>
+          <Link href="/privacy" className={footerLinkClass}>Privacy</Link>
+          <Link href="/terms" className={footerLinkClass}>Terms</Link>
+          <Link href="/licence" className={footerLinkClass}>Content licence</Link>
+          <Link href="/credits" className={footerLinkClass}>Credits</Link>
         </nav>
       </div>
 
