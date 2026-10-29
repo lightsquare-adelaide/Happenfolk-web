@@ -2,7 +2,7 @@
 /**
  * Browser smoke: scripts/browser-smoke.mjs <baseUrl>
  *
- * Renders pages with the system chromium (--headless=new, no sandbox)
+ * Renders pages with Chrome/Chromium (--headless=new, temporary profile)
  * and inspects the DOM *after JavaScript executed*:
  *   - /login and /register contain an <input type="email"> and an
  *     <input type="password"> (the forms hydrate instead of crashing);

@@ -24,6 +24,8 @@ This log summarizes the integrated audit remediation beginning with PR #30 and l
 | Hidden/private data leaking through indirect surfaces | Align RLS/search/recommendations/likes/views with public parent visibility | `20261028200400_public_visibility_fixes.sql`, compliance suites |
 | Raw view retention lacked identity-free aggregates | Serialized monthly rollup then raw purge after 90 days, daily cron and restricted execution | `20261028200300_retention_monthly_aggregate.sql`, retention compliance suite |
 | Paid checkout lacked integrated routes and caller-specific outcome | Registration/order/cancel routes, checkout page and per-order simulator; immutable terminal outcomes | `20261029000100_settle_outcome_per_order.sql`, payments/integration suites |
+| Checkout test intermittently flagged UUIDs as card fields | Inspect control name/id/type/autocomplete/placeholder/label attributes instead of arbitrary form values | Payment assertion regression tests |
+| Legacy demo repeat run lost the signed-in user | Use the successful authentication result for profile lookup; fail on upload/publish errors | `scripts/demo-seed.mjs`, launch integration regression |
 | Missing launch scripts/docs/CI gates | Guarded sample lifecycle, smoke/live journey/browser tooling, runbook and explicit stack suites in CI | Package X scripts/docs/integration/compliance |
 
 ## Accepted behavior and remaining limits
