@@ -93,7 +93,7 @@ export default async function EventPage({ params }: Context) {
           {event.price_cents === 0 ? (
             <Link prefetch={false} href={`/events/${event.id}/participate`} className={primaryButtonClass}>Participate · Free</Link>
           ) : (
-            <p role="status" className="text-sm text-muted">Paid event booking is not available yet.</p>
+            <Link prefetch={false} href={`/events/${event.id}/participate`} className={primaryButtonClass}>Participate · Simulated payment</Link>
           )}
         </section>
       ) : null}
