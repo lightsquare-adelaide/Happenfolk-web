@@ -12,7 +12,8 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const getEvent = cache(async (id: string) => {
   if (!uuid.test(id)) return null;
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("events")
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase.from(user ? "events" : "public_events")
     .select("id, title, description, location, starts_at, ends_at, cover_path, status, host_id, category_id, price_cents")
     .eq("id", id).maybeSingle();
   if (error) throw new Error("Could not load this event");
@@ -73,7 +74,9 @@ export default async function EventPage({ params }: Context) {
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-muted">Where</dt>
-            <dd className="mt-2 break-words text-base leading-7">{event.location || "Location to be confirmed"}</dd>
+            <dd className="mt-2 break-words text-base leading-7">{account.data.user ? (event.location || "Location to be confirmed") : (
+              <Link href={`/login?next=${encodeURIComponent(`/events/${event.id}`)}`} className="underline underline-offset-4">Sign in to see the venue</Link>
+            )}</dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-muted">Organised by</dt>

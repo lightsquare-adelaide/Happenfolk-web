@@ -45,7 +45,14 @@ function Wall({ works }: { works: WorkCardData[] }) {
     );
   }
   const [lead, ...rest] = works;
+  const sizes = "(min-width: 1280px) 280px, (min-width: 1024px) 23vw, calc((100vw - 52px) / 2)";
   return (
+    <>
+    <link rel="preload" as="image" href={lead.smallCoverUrl ?? lead.coverUrl!}
+      media="(max-width: 600px)" fetchPriority="high" />
+    <link rel="preload" as="image" href={lead.coverUrl!}
+      imageSrcSet={lead.smallCoverUrl ? `${lead.smallCoverUrl} ${lead.smallWidth ?? 480}w, ${lead.coverUrl} ${lead.width ?? 1080}w` : undefined}
+      imageSizes={sizes} media="(min-width: 601px)" fetchPriority="high" />
     <ul className={`grid min-w-0 gap-3 ${rest.length ? "grid-cols-2" : "grid-cols-1"} aspect-[4/3] lg:aspect-[5/6]`}>
       {[lead, ...rest].map((work, index) => {
         const href = /^[0-9a-f-]{36}$/i.test(work.id)
@@ -54,12 +61,17 @@ function Wall({ works }: { works: WorkCardData[] }) {
         return (
         <li key={work.id} className={`relative min-w-0 overflow-hidden border border-line bg-tint ${index === 0 && rest.length ? "row-span-2" : ""}`}>
           <Link prefetch={false} href={href} className="group block h-full outline-offset-4">
-            {/* eslint-disable-next-line @next/next/no-img-element -- public portfolio cover */}
-            <img src={work.coverUrl!} alt={work.alt} width={work.width ?? 800} height={work.height ?? 1000}
-              loading="eager" fetchPriority={index === 0 ? "high" : "auto"} decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 motion-safe:group-hover:scale-[1.03]" />
+            <picture>
+              {work.smallCoverUrl ? <source media="(max-width: 600px)" srcSet={`${work.smallCoverUrl} ${work.smallWidth ?? 480}w`} sizes={sizes} /> : null}
+              {/* Public bounded derivatives; picture selects the phone size. */}
+              <img src={work.coverUrl!} alt={work.alt} width={work.width ?? 800} height={work.height ?? 1000}
+                srcSet={work.smallCoverUrl ? `${work.smallCoverUrl} ${work.smallWidth ?? 480}w, ${work.coverUrl} ${work.width ?? 1080}w` : undefined}
+                sizes={sizes} loading={index === 0 ? "eager" : "lazy"}
+                fetchPriority={index === 0 ? "high" : "auto"} decoding="async"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 motion-safe:group-hover:scale-[1.03]" />
+            </picture>
             <span className="absolute inset-x-0 bottom-0 bg-background px-3 py-2 text-xs leading-5">
-              <span className="font-medium">{work.title}</span>
+              <span className="font-medium underline underline-offset-4">{work.title}</span>
               <span className="text-muted"> · {work.artistName}</span>
             </span>
           </Link>
@@ -67,5 +79,6 @@ function Wall({ works }: { works: WorkCardData[] }) {
       );
       })}
     </ul>
+    </>
   );
 }
