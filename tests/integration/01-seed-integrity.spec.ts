@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withPg, anonClient } from "../compliance/_harness";
+import { withPg, anonClient, stackConfig } from "../compliance/_harness";
 
 describe("launch seed integrity", () => {
   it("provides forty sample artists, 84 events and 120 works", async () => {
@@ -38,4 +38,25 @@ describe("launch seed integrity", () => {
       expect(data?.every((r) => !r.is_hidden)).toBe(true);
     }
   });
+  it("lets the documented local sample account sign in", async () => {
+    const client = anonClient();
+    const { data, error } = await client.auth.signInWithPassword({
+      email: "sample.artist.01@example.test", password: "Sample-Happenfolk-2026!",
+    });
+    expect(error).toBeNull();
+    expect(data.user?.id).toBe("fa000001-0000-4000-8000-000000000001");
+    expect(data.session).not.toBeNull();
+    await client.auth.signOut();
+  });
+  it("serves real generated sample image bytes after seed:media", async () => {
+    const { data, error } = await anonClient().from("media_assets").select("path")
+      .eq("portfolio_item_id", "fa000003-0000-4000-8000-000000000001")
+      .eq("bucket", "media").limit(1).single();
+    expect(error).toBeNull();
+    const res = await fetch(`${stackConfig().url}/storage/v1/object/public/media/${data!.path}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("image/webp");
+    expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(100);
+  });
+
 });
