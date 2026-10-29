@@ -2,7 +2,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { appBase, startApp } from "../auth/_harness";
-import { withPg, anonClient } from "../compliance/_harness";
+import { withPg, anonClient, adminClient } from "../compliance/_harness";
+
+import { cleanupAccount } from "../../scripts/http-harness.mjs";
 
 const run = promisify(execFile);
 let server: Awaited<ReturnType<typeof startApp>> | undefined;
@@ -48,6 +50,24 @@ describe("launch integration against a seeded production server", () => {
     expect(data?.some((r: { id: string }) => r.id === "fa000003-0000-4000-8000-000000000001")).toBe(true);
     expect(data?.some((r: { id: string }) => r.id === "fa000003-0000-4000-8000-000000000111")).toBe(false);
   });
+  it("keeps the named legacy demo account creatable and repeatable", async () => {
+    const email = "demo.artist@happenfolk.test";
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { stdout } = await run(process.execPath, ["scripts/demo-seed.mjs", appBase()], {
+          env: { ...process.env, DEMO_EMAIL: email }, timeout: 90_000,
+        });
+        expect(stdout).toContain("publish: 200");
+        expect(stdout).toContain("Public page:");
+        expect(stdout).not.toContain("undefined");
+      }
+    } finally {
+      await withPg(async (db) => {
+        const { rows } = await db.query("select id from auth.users where email=$1", [email]);
+        if (rows[0]) await cleanupAccount(adminClient(), rows[0].id);
+      });
+    }
+  }, 190_000);
   it("completes signup, media, free registration, paid retry and cleanup", async () => {
     const { stdout } = await run(process.execPath, ["scripts/e2e.mjs"], {
       env: { ...process.env, BASE_URL: appBase() }, timeout: 180_000,
