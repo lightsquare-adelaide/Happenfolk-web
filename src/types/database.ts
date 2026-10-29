@@ -34,6 +34,43 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_staff: {
+        Row: {
+          added_at: string
+          member_id: string
+        }
+        Insert: {
+          added_at?: string
+          member_id: string
+        }
+        Update: {
+          added_at?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_staff_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_staff_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "recommended_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_staff_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "trending_artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       avatar_operation_locks: {
         Row: {
           expires_at: string
@@ -242,8 +279,8 @@ export type Database = {
           ends_at: string | null
           host_id: string
           id: string
+          is_hidden: boolean
           location: string | null
-          open_to_collaborate: boolean
           price_cents: number
           search_vector: unknown
           starts_at: string
@@ -260,8 +297,8 @@ export type Database = {
           ends_at?: string | null
           host_id: string
           id?: string
+          is_hidden?: boolean
           location?: string | null
-          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at: string
@@ -278,8 +315,8 @@ export type Database = {
           ends_at?: string | null
           host_id?: string
           id?: string
+          is_hidden?: boolean
           location?: string | null
-          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at?: string
@@ -554,6 +591,30 @@ export type Database = {
           },
         ]
       }
+      page_views_monthly: {
+        Row: {
+          id: number
+          subject_id: string
+          subject_type: string
+          view_count: number
+          view_month: string
+        }
+        Insert: {
+          id?: never
+          subject_id: string
+          subject_type: string
+          view_count: number
+          view_month: string
+        }
+        Update: {
+          id?: never
+          subject_id?: string
+          subject_type?: string
+          view_count?: number
+          view_month?: string
+        }
+        Relationships: []
+      }
       payment_stub_settings: {
         Row: {
           force_fail: boolean
@@ -574,6 +635,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_hidden: boolean
           media_kind: string
           position: number
           profile_id: string
@@ -589,6 +651,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_hidden?: boolean
           media_kind: string
           position?: number
           profile_id: string
@@ -604,6 +667,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_hidden?: boolean
           media_kind?: string
           position?: number
           profile_id?: string
@@ -645,48 +709,48 @@ export type Database = {
           avatar_path: string | null
           bio: string | null
           category_id: number | null
+          contact_email: string | null
           created_at: string
           display_name: string
           handle: string
-          headline: string | null
           id: string
-          location: string | null
+          is_hidden: boolean
+          open_to_collaborate: boolean
           published: boolean
           search_vector: unknown
           updated_at: string
-          website: string | null
         }
         Insert: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
           avatar_path?: string | null
           bio?: string | null
           category_id?: number | null
+          contact_email?: string | null
           created_at?: string
           display_name: string
           handle: string
-          headline?: string | null
           id: string
-          location?: string | null
+          is_hidden?: boolean
+          open_to_collaborate?: boolean
           published?: boolean
           search_vector?: unknown
           updated_at?: string
-          website?: string | null
         }
         Update: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
           avatar_path?: string | null
           bio?: string | null
           category_id?: number | null
+          contact_email?: string | null
           created_at?: string
           display_name?: string
           handle?: string
-          headline?: string | null
           id?: string
-          location?: string | null
+          is_hidden?: boolean
+          open_to_collaborate?: boolean
           published?: boolean
           search_vector?: unknown
           updated_at?: string
-          website?: string | null
         }
         Relationships: [
           {
@@ -850,6 +914,31 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_hidden: {
+        Args: {
+          p_hidden: boolean
+          p_subject_id: string
+          p_subject_type: string
+        }
+        Returns: undefined
+      }
+      admin_update_event: {
+        Args: {
+          p_description: string
+          p_event_id: string
+          p_location: string
+          p_title: string
+        }
+        Returns: undefined
+      }
+      admin_update_item: {
+        Args: { p_description: string; p_item_id: string; p_title: string }
+        Returns: undefined
+      }
+      admin_update_profile: {
+        Args: { p_bio: string; p_display_name: string; p_member_id: string }
+        Returns: undefined
+      }
       cancel_registration: {
         Args: { p_registration_id: string }
         Returns: undefined
@@ -868,6 +957,7 @@ export type Database = {
         Args: { p_event: string; p_member: string }
         Returns: boolean
       }
+      is_staff: { Args: never; Returns: boolean }
       member_category_view_signal: {
         Args: never
         Returns: {
@@ -884,6 +974,7 @@ export type Database = {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: string
       }
+      purge_page_views_before: { Args: { p_cutoff: string }; Returns: number }
       record_member_view: {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: undefined
@@ -904,6 +995,13 @@ export type Database = {
       reorder_media: {
         Args: { p_asset_id: string; p_direction: string; p_item_id: string }
         Returns: boolean
+      }
+      run_page_view_retention: {
+        Args: { p_retain?: string }
+        Returns: {
+          archived_rows: number
+          purged_rows: number
+        }[]
       }
       search_artists: {
         Args: { p_category_id?: number; p_limit?: number; p_query: string }
@@ -940,12 +1038,13 @@ export type Database = {
         Args: { p_force_fail: boolean }
         Returns: undefined
       }
-      settle_order: {
-        Args: { p_force_fail?: boolean; p_order_id: string }
-        Returns: string
-      }
+      settle_order: { Args: { p_order_id: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      subject_is_public: {
+        Args: { p_subject_id: string; p_subject_type: string }
+        Returns: boolean
+      }
       toggle_like: {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: boolean

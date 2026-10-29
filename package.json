@@ -22,7 +22,8 @@
     "test:media": "vitest run --no-file-parallelism tests/media",
     "test:events": "vitest run --no-file-parallelism tests/events",
     "test:portfolio": "vitest run --no-file-parallelism tests/portfolio",
-    "test:discovery": "vitest run --no-file-parallelism tests/discovery"
+    "test:discovery": "vitest run --no-file-parallelism tests/discovery",
+    "test:compliance": "vitest run --no-file-parallelism tests/compliance"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
