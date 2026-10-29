@@ -116,7 +116,7 @@ export async function completeOnboarding(user: TestUser): Promise<void> {
 // PID-derived port: a stale server from an earlier run can never be
 // mistaken for the one this process started (it happened once and the
 // suite silently served a stale build — see PROGRESS.md).
-const PORT = 3801 + (process.pid % 500);
+const PORT = Number(process.env.TEST_APP_PORT) || 3801 + (process.pid % 500);
 export function appBase(): string {
   return `http://127.0.0.1:${PORT}`;
 }

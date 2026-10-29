@@ -169,8 +169,8 @@ import net from "node:net";
 // GET /api/media/avatar, which must answer 405 because the route
 // exports POST only.
 
-const PORT_MIN = 3801;
-const PORT_SPAN = 500;
+const PORT_MIN = Number(process.env.TEST_APP_PORT) || 3801;
+const PORT_SPAN = process.env.TEST_APP_PORT ? 1 : 500;
 
 let port = 0;
 let child: ChildProcess | null = null;

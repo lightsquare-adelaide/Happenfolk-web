@@ -243,6 +243,7 @@ export type Database = {
           host_id: string
           id: string
           location: string | null
+          open_to_collaborate: boolean
           price_cents: number
           search_vector: unknown
           starts_at: string
@@ -260,6 +261,7 @@ export type Database = {
           host_id: string
           id?: string
           location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at: string
@@ -277,6 +279,7 @@ export type Database = {
           host_id?: string
           id?: string
           location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at?: string
@@ -645,10 +648,13 @@ export type Database = {
           created_at: string
           display_name: string
           handle: string
+          headline: string | null
           id: string
+          location: string | null
           published: boolean
           search_vector: unknown
           updated_at: string
+          website: string | null
         }
         Insert: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
@@ -658,10 +664,13 @@ export type Database = {
           created_at?: string
           display_name: string
           handle: string
+          headline?: string | null
           id: string
+          location?: string | null
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Update: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
@@ -671,10 +680,13 @@ export type Database = {
           created_at?: string
           display_name?: string
           handle?: string
+          headline?: string | null
           id?: string
+          location?: string | null
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {

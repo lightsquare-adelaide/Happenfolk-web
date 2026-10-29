@@ -1,4 +1,7 @@
-# Lightsquare
+# Happenfolk
+
+Formerly Lightsquare; the client approved the new name on 18 September 2026.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the shared branding convention and staged rename.
 
 A Platform for Independent Artists — a collaborative showcasing platform for
 independent artists in South Australia.
