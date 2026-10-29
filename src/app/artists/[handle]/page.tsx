@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { publicDisplayAssets, type MediaRow } from "@/lib/portfolio";
 import { PortfolioGallery } from "@/components/portfolio-gallery";
+import { ViewTracker, WorkViewTracker } from "@/components/view-tracker";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -83,6 +84,7 @@ export default async function ArtistPage({ params }: Params) {
 
   return (
     <main className="shell-wrap py-10 lg:py-16">
+      {profile.published ? <ViewTracker subjectType="profile" subjectId={profile.id} /> : null}
       {!profile.published ? (
         <div role="status" className="mb-8 border border-line bg-surface px-5 py-4 text-sm leading-6">
           Only you can see this profile. <Link href="/dashboard/profile" className="underline underline-offset-4">Publish it from your profile settings.</Link>
@@ -120,6 +122,7 @@ export default async function ArtistPage({ params }: Params) {
           <ul className="grid min-w-0 gap-x-8 gap-y-12 sm:grid-cols-2">
             {works.map((work) => (
               <li key={work.id} className="min-w-0">
+                {profile.published && work.published ? <WorkViewTracker itemId={work.id} /> : null}
                 {work.media.length ? (
                   <PortfolioGallery title={work.title} media={work.media} />
                 ) : (
