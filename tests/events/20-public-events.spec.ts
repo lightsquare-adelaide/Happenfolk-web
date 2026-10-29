@@ -52,12 +52,13 @@ describe("public event pages on the real stack", () => {
     }
   });
 
-  test("anonymous directory exposes published events and their place and time", async () => {
+  test("anonymous directory exposes summaries and time while protecting venues", async () => {
     const response = await fetch(`${appBase()}/events`);
     expect(response.status).toBe(200);
     const html = await response.text();
     expect(html).toContain(names.published);
-    expect(html).toContain("Adelaide exhibition space");
+    expect(html).not.toContain("Adelaide exhibition space");
+    expect(html).toContain("Sign in to see the venue");
     expect(html).toContain("Australia/Adelaide");
     expect(html).not.toContain(names.draft);
     expect(html).not.toContain(names.cancelled);
@@ -77,11 +78,22 @@ describe("public event pages on the real stack", () => {
     const html = await response.text();
     expect(response.status).toBe(200);
     expect(html).toContain(names.published);
-    expect(html).toContain("Adelaide exhibition space");
-    expect(html).toContain("A public-facing artist exhibition.");
+    expect(html).not.toContain("Adelaide exhibition space");
+    expect(html).toContain("Sign in to see the venue");
+    expect(html).not.toContain("A public-facing artist exhibition.");
+    expect(html).toContain(`/login?next=${encodeURIComponent(`/events/${published}`)}`);
     expect(html).toContain(`/artists/${handle}`);
     expect(html).toContain("Public event organising artist");
     expect(html).toContain("7:00 pm");
+  });
+
+  test("signed-in detail retains the exact venue and full description", async () => {
+    const response = await fetch(`${appBase()}/events/${published}`, { headers: { cookie } });
+    const html = await response.text();
+    expect(response.status).toBe(200);
+    expect(html).toContain("Adelaide exhibition space");
+    expect(html).toContain("A public-facing artist exhibition.");
+    expect(html).not.toContain("Sign in to see the venue");
   });
 
   test("anonymous draft and cancelled details are 404", async () => {
