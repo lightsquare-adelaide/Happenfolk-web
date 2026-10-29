@@ -113,4 +113,5 @@ Full JSON reports, curl output, browser evidence, command exit codes and detaile
 logs are saved at /Users/mac/.leader-tasks/2026-10-30-5800-report-85/.
 No credentials, isolated Supabase config, package changes or historical migration
 edits are included. Peer review of the events/discovery migration is pending;
-this change is a reviewable PR and has not been merged or deployed remotely.
+this change is a reviewable PR and has not been merged. No remote database
+migration was run by this task; automated preview deployments can run on push.
