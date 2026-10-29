@@ -122,7 +122,7 @@ export default async function ArtistPage({ params }: Params) {
           <ul className="grid min-w-0 gap-x-8 gap-y-12 sm:grid-cols-2">
             {works.map((work) => (
               <li key={work.id} className="min-w-0">
-                {work.published ? <WorkViewTracker itemId={work.id} /> : null}
+                {profile.published && work.published ? <WorkViewTracker itemId={work.id} /> : null}
                 {work.media.length ? (
                   <PortfolioGallery title={work.title} media={work.media} />
                 ) : (

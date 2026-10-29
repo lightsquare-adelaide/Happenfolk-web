@@ -154,14 +154,15 @@ export async function readBoundedBody(
       if (value) {
         total += value.byteLength;
         if (total > limitBytes) {
-          await reader.cancel().catch(() => undefined);
+          // Upstream cancellation may never settle; rejection must be prompt.
+          void reader.cancel().catch(() => undefined);
           return null; // over limit: stop reading, drop the connection body
         }
         chunks.push(value);
       }
     }
   } catch {
-    await reader.cancel().catch(() => undefined);
+    void reader.cancel().catch(() => undefined);
     return null;
   }
   const decoder = new TextDecoder();

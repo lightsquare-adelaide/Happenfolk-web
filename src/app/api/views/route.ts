@@ -78,7 +78,7 @@ function parseViewBody(raw: string): ViewBody | null {
   }
   const body = parsed as Record<string, unknown>;
   if (!isViewSubjectType(body.subjectType) || !isViewSubjectId(body.subjectId)) return null;
-  return { subjectType: body.subjectType, subjectId: body.subjectId };
+  return { subjectType: body.subjectType, subjectId: body.subjectId.toLowerCase() };
 }
 
 /**
@@ -156,6 +156,9 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    if (body.subjectType === "profile" && body.subjectId === user.id) {
+      return NextResponse.json({ ok: true, skipped: true });
+    }
     // Member path: identity is the verified auth.uid() inside the RPC.
     const { error } = await supabase.rpc("record_member_view", {
       p_subject_type: body.subjectType,
@@ -172,7 +175,10 @@ export async function POST(request: Request) {
   }
 
   // Anonymous path: trusted-proxy identity or skip.
-  const mode = forwardedTrustMode(process.env);
+  const mode = forwardedTrustMode({
+    VERCEL: process.env.VERCEL,
+    VIEW_RECORDING_TRUST_FORWARDED_FOR: process.env.VIEW_RECORDING_TRUST_FORWARDED_FOR,
+  });
   const clientIp = trustedClientIp(request.headers, mode);
   const userAgent = request.headers.get("user-agent")?.trim() ?? "";
   if (!clientIp || !isValidForwardedUserAgent(userAgent)) {

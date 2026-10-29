@@ -1,4 +1,6 @@
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
+import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -16,10 +18,8 @@ import {
   publishProfile,
 } from "./_harness";
 import {
-  appBase,
   createUser,
   sessionCookieHeader,
-  startApp,
   type TestUser,
 } from "../auth/_harness";
 
@@ -47,41 +47,70 @@ const UA_A = `Mozilla/5.0 (X11; Test; ${runTag}) SharedUA`;
 
 let closeApp: (() => Promise<void>) | null = null;
 
-// ---------------- second server: UNTRUSTED mode ----------------
-const UNTRUSTED_PORT = 3801 + (process.pid % 500) + 1000;
-const untrustedBase = `http://127.0.0.1:${UNTRUSTED_PORT}`;
-let untrustedChild: ReturnType<typeof spawn> | null = null;
+// One isolated app port, including the untrusted-mode check. Never start
+// a second stack or borrow another executor's application port.
+const PORT = 3102;
+const appBase = () => `http://127.0.0.1:${PORT}`;
 
-async function startUntrustedApp(): Promise<void> {
+async function startApp(trusted = true): Promise<{ close: () => Promise<void> }> {
   const root = process.cwd();
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "production" };
-  delete env.VIEW_RECORDING_TRUST_FORWARDED_FOR;
   delete env.VERCEL;
-  untrustedChild = spawn(
+  if (trusted) env.VIEW_RECORDING_TRUST_FORWARDED_FOR = "1";
+  else delete env.VIEW_RECORDING_TRUST_FORWARDED_FOR;
+  const child = spawn(
     process.execPath,
     [
       path.join(root, "node_modules", "next", "dist", "bin", "next"),
       "start",
       "-p",
-      String(UNTRUSTED_PORT),
+      String(PORT),
       "-H",
       "127.0.0.1",
     ],
     { cwd: root, stdio: "ignore", detached: true, env },
   );
+  const close = async () => {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    process.kill(-child.pid!, "SIGTERM");
+    await exited;
+  };
   const deadline = Date.now() + 30_000;
-  for (;;) {
-    if (untrustedChild.exitCode !== null) {
-      throw new Error(`untrusted next start exited early (code ${untrustedChild.exitCode})`);
+  try {
+    for (;;) {
+      if (child.exitCode !== null) {
+        throw new Error(`next start exited early (code ${child.exitCode}) on ${PORT}`);
+      }
+      if (Date.now() > deadline) throw new Error("next start not ready within 30s");
+      try {
+        const res = await fetch(appBase(), { redirect: "manual" });
+        await res.arrayBuffer();
+        if (res.status > 0) return { close };
+      } catch {
+        // not up yet
+      }
+      await new Promise((r) => setTimeout(r, 250));
     }
-    if (Date.now() > deadline) throw new Error("untrusted next start not ready within 30s");
-    try {
-      const res = await fetch(untrustedBase, { redirect: "manual" });
-      if (res.status > 0) break;
-    } catch {
-      // not up yet
-    }
-    await new Promise((r) => setTimeout(r, 250));
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}
+
+function buildWhenStale() {
+  const newest = (file: string): number => {
+    if (!fs.existsSync(file)) return 0;
+    const stat = fs.statSync(file);
+    return stat.isDirectory()
+      ? Math.max(0, ...fs.readdirSync(file).map((entry) => newest(path.join(file, entry))))
+      : stat.mtimeMs;
+  };
+  const inputs = ["src", "next.config.ts", "package.json", "tsconfig.json", "postcss.config.mjs", ".env.local"];
+  if (newest(".next/BUILD_ID") <= Math.max(...inputs.map(newest))) {
+    execSync("nice -n 10 npm run build", {
+      stdio: "inherit", env: { ...process.env, NODE_ENV: "production" },
+    });
   }
 }
 
@@ -98,6 +127,11 @@ let publicEventId: string; // per-identity counting subject
 let memberEventId: string; // member recording subject
 let publicItemId: string; // item of a PUBLIC artist (recordable)
 let privateOwnerItemId: string; // PUBLISHED item of a PRIVATE artist (must never record)
+let draftItemId: string;
+let draftEventId: string;
+let cancelledEventId: string;
+let publicArtistCookie: string;
+let privateArtistCookie: string;
 
 const createdUserIds: string[] = [];
 const createdSubjectIds: string[] = [];
@@ -109,9 +143,9 @@ async function makeUser(label: string): Promise<TestUser> {
 }
 
 beforeAll(async () => {
-  const app = await startApp(); // builds when stale, trusted-mode env inherited
+  buildWhenStale();
+  const app = await startApp();
   closeApp = app.close;
-  await startUntrustedApp();
 
   publicArtist = await makeUser("public-artist");
   privateArtist = await makeUser("private-artist");
@@ -131,9 +165,20 @@ beforeAll(async () => {
   publicItemId = pubItem.id;
   privateOwnerItemId = privItem.id;
   createdSubjectIds.push(pubItem.id, privItem.id, publicArtist.userId, privateArtist.userId);
+  const draftItem = await createPortfolioItem(publicArtist, `Draft Work ${runTag}`, false);
+  draftItemId = draftItem.id;
+  createdSubjectIds.push(draftItemId);
+  for (const status of ["draft", "cancelled"] as const) {
+    const event = await createEvent(publicArtist, `${status} Event ${runTag}`, MUSIC, status);
+    createdSubjectIds.push(event.id);
+    if (status === "draft") draftEventId = event.id;
+    else cancelledEventId = event.id;
+  }
 
   member1Cookie = await sessionCookieHeader(member1.email, member1.password);
   member2Cookie = await sessionCookieHeader(member2.email, member2.password);
+  publicArtistCookie = await sessionCookieHeader(publicArtist.email, publicArtist.password);
+  privateArtistCookie = await sessionCookieHeader(privateArtist.email, privateArtist.password);
 }, 240_000);
 
 afterAll(async () => {
@@ -150,17 +195,6 @@ afterAll(async () => {
       await a.query(`delete from auth.users where id = $1`, [uid]);
     }
   } finally {
-    if (untrustedChild?.pid) {
-      try {
-        process.kill(-untrustedChild.pid, "SIGTERM");
-      } catch {
-        try {
-          untrustedChild.kill("SIGTERM");
-        } catch {
-          // already gone
-        }
-      }
-    }
     if (closeApp) await closeApp();
   }
 });
@@ -300,8 +334,10 @@ describe("S2 — member recording uses the verified auth.uid()", () => {
 });
 
 describe("S2 — missing trusted identity skips instead of collapsing", () => {
-  it("skips anonymous recording without a trusted client IP", async () => {
-    const res = await postView(appBase(), validBody("event", publicEventId), anonHeaders(null));
+  it("skips anonymous recording with an unusable trusted client IP", async () => {
+    // Next supplies the socket peer IP when the header is absent. An
+    // explicit empty header exercises missing identity at the route boundary.
+    const res = await postView(appBase(), validBody("event", publicEventId), anonHeaders(""));
     expect(res.status).toBe(200);
     expect(res.json).toMatchObject({ ok: true, skipped: true });
     // Only the three rows from the first spec (21, 22, 23).
@@ -315,18 +351,82 @@ describe("S2 — missing trusted identity skips instead of collapsing", () => {
     expect(await viewRowsFor(publicEventId)).toHaveLength(3);
   });
 
+  it("also skips a raw HTTP request whose User-Agent header is absent", async () => {
+    const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = http.request(`${appBase()}/api/views`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.32" },
+      }, (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => { body += chunk; });
+        res.on("end", () => resolve({ status: res.statusCode!, body }));
+      });
+      req.on("error", reject);
+      req.end(JSON.stringify(validBody("event", publicEventId)));
+    });
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ ok: true, skipped: true });
+    expect(await viewRowsFor(publicEventId)).toHaveLength(3);
+  });
+
   it("skips anonymous recording entirely in untrusted mode (no opt-in env)", async () => {
     // Perfect-looking forwarded headers, but the server was started
     // WITHOUT the documented opt-in: nothing may be recorded, and no
     // server-wide fingerprint is invented either.
-    const res = await postView(untrustedBase, validBody("event", publicEventId), anonHeaders("203.0.113.41"));
-    expect(res.status).toBe(200);
-    expect(res.json).toMatchObject({ ok: true, skipped: true });
+    await closeApp!();
+    const untrusted = await startApp(false);
+    closeApp = untrusted.close;
+    try {
+      const res = await postView(appBase(), validBody("event", publicEventId), anonHeaders("203.0.113.41"));
+      expect(res.status).toBe(200);
+      expect(res.json).toMatchObject({ ok: true, skipped: true });
+      expect(await viewRowsFor(publicEventId)).toHaveLength(3);
+    } finally {
+      await untrusted.close();
+      closeApp = (await startApp()).close;
+    }
+    // Restart cleared the in-memory throttle: DB dedupe still prevents
+    // two concurrent repeats from adding rows for an existing visitor.
+    await Promise.all([
+      postView(appBase(), validBody("event", publicEventId), anonHeaders("203.0.113.21")),
+      postView(appBase(), validBody("event", publicEventId), anonHeaders("203.0.113.21")),
+    ]);
     expect(await viewRowsFor(publicEventId)).toHaveLength(3);
   });
 });
 
 describe("S2 — malformed input is rejected without writing", () => {
+  it("returns 400 within 2 seconds for a 2 KiB chunked body that never ends", async () => {
+    const startedAt = performance.now();
+    const result = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = http.request(`${appBase()}/api/views`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "transfer-encoding": "chunked" },
+      }, (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => { body += chunk; });
+        res.on("end", () => {
+          clearTimeout(timer);
+          resolve({ status: res.statusCode!, body });
+          req.destroy();
+        });
+      });
+      const timer = setTimeout(() => {
+        req.destroy();
+        reject(new Error("no response within 2 seconds for an endless 2 KiB body"));
+      }, 2000);
+      req.on("error", (error) => { clearTimeout(timer); reject(error); });
+      req.write("x".repeat(2048));
+      // Deliberately omit req.end(): the server must reject mid-upload.
+    });
+    expect(result.status).toBe(400);
+    expect(JSON.parse(result.body)).toMatchObject({ ok: false });
+    expect(performance.now() - startedAt).toBeLessThan(2000);
+    expect(await viewRowsFor(publicEventId)).toHaveLength(3);
+    console.log(`endless chunked body: HTTP ${result.status}, ${Math.round(performance.now() - startedAt)} ms`);
+  });
   it("400s on malformed JSON, wrong types, extra keys, arrays and oversize bodies", async () => {
     const base = appBase();
     const cases: unknown[] = [
@@ -372,6 +472,52 @@ describe("S2 — malformed input is rejected without writing", () => {
 });
 
 describe("S2 — public-subject visibility precheck (before any RPC)", () => {
+  it("does not count the viewer's own published profile, including uppercase UUIDs", async () => {
+    for (const id of [publicArtist.userId, publicArtist.userId.toUpperCase()]) {
+      const before = await viewRowsFor(publicArtist.userId);
+      const res = await postView(appBase(), validBody("profile", id), {
+        cookie: publicArtistCookie,
+        "user-agent": UA_A,
+      });
+      expect(res.status).toBe(200);
+      expect(await viewRowsFor(publicArtist.userId)).toEqual(before);
+    }
+  });
+
+  it("never records drafts, cancelled events, private profiles or private-owner items for any caller", async () => {
+    const subjects = [
+      validBody("portfolio_item", draftItemId),
+      validBody("event", draftEventId),
+      validBody("event", cancelledEventId),
+      validBody("profile", privateArtist.userId),
+      validBody("portfolio_item", privateOwnerItemId),
+    ];
+    for (const cookie of ["", member1Cookie, publicArtistCookie, privateArtistCookie]) {
+      for (const subject of subjects) {
+        const res = await postView(appBase(), subject, {
+          ...anonHeaders("203.0.113.99"), ...(cookie ? { cookie } : {}),
+        });
+        expect(res.status).toBe(200);
+        expect(res.json).toEqual({ ok: false });
+        expect(await viewRowsFor(subject.subjectId)).toHaveLength(0);
+      }
+    }
+  });
+
+  it("mounts work trackers only when both the profile and the work are published", async () => {
+    for (const [artist, cookie, itemId, visible] of [
+      [publicArtist, publicArtistCookie, publicItemId, true],
+      [privateArtist, privateArtistCookie, privateOwnerItemId, false],
+    ] as const) {
+      const { data, error } = await artist.client.from("profiles").select("handle").eq("id", artist.userId).single();
+      expect(error).toBeNull();
+      const res = await fetch(`${appBase()}/artists/${data!.handle}`, { headers: { cookie } });
+      const html = await res.text();
+      expect(res.status).toBe(200);
+      expect(html.includes(`data-work-view-sentinel="${itemId}"`)).toBe(visible);
+      expect(html).not.toContain(`data-work-view-sentinel="${draftItemId}"`);
+    }
+  });
   it("anonymous: private profile is not recordable", async () => {
     const res = await postView(appBase(), validBody("profile", privateArtist.userId), anonHeaders("203.0.113.71"));
     expect(res.status).toBe(200);
@@ -435,5 +581,13 @@ describe("S2 — public-subject visibility precheck (before any RPC)", () => {
     const itemRes = await postView(base, validBody("portfolio_item", publicItemId), anonHeaders("203.0.113.82"));
     expect(itemRes.json).toMatchObject({ ok: true });
     expect(await viewRowsFor(publicItemId)).toHaveLength(1);
+
+    for (const [subjectType, subjectId] of [["profile", publicArtist.userId], ["portfolio_item", publicItemId]]) {
+      const memberRes = await postView(base, validBody(subjectType, subjectId), { cookie: member1Cookie });
+      expect(memberRes.json).toMatchObject({ ok: true });
+      const rows = await viewRowsFor(subjectId);
+      expect(rows).toHaveLength(2);
+      expect(rows.some((row) => row.viewer_id === member1.userId && row.visitor_hash === null)).toBe(true);
+    }
   });
 });

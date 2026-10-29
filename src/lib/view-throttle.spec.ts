@@ -233,4 +233,35 @@ describe("readBoundedBody", () => {
     } as RequestInit);
     expect(await readBoundedBody(req)).toBeNull();
   });
+
+  it("rejects an endless oversized body without waiting for cancellation", async () => {
+    let cancelled = false;
+    const req = new Request("http://localhost/api/views", {
+      method: "POST",
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(2048));
+        },
+        cancel() {
+          cancelled = true;
+          // An upstream producer need not acknowledge cancellation promptly.
+          return new Promise<void>(() => {});
+        },
+      }),
+      duplex: "half",
+    } as RequestInit);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([
+        readBoundedBody(req),
+        new Promise<string>((resolve) => {
+          timer = setTimeout(() => resolve("timed out"), 200);
+        }),
+      ]);
+      expect(result).toBeNull();
+      expect(cancelled).toBe(true);
+    } finally {
+      clearTimeout(timer);
+    }
+  });
 });

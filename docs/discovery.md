@@ -156,3 +156,61 @@ guard restores itself afterwards):
 
 CI runs `test:discovery` in the integration job after `test:portfolio`;
 the suite is excluded from plain `npm test` (it needs the local stack).
+
+## View recording
+
+`POST /api/views` accepts exactly
+`{ "subjectType": "event" | "profile" | "portfolio_item", "subjectId": "<uuid>" }`.
+Malformed JSON, invalid subjects, missing or additional fields, and bodies
+over **1 KiB** return 400. The route reads the body stream with a byte
+budget and cancels oversized uploads immediately, without waiting for
+the sender to finish or acknowledge cancellation. Cross-origin browser
+requests return 403 before a database client is created.
+
+Both anonymous and signed-in requests must pass the same public-visibility
+check through a caller-scoped Supabase client. Profiles must be published,
+events must have `status = 'published'`, and portfolio items require both
+`portfolio_items.published` and the owning `profiles.published`. Private
+previews, drafts, cancelled events and unknown IDs return the same quiet
+`{ "ok": false }` without inserting rows. Viewing your own published
+profile returns `{ "ok": true, "skipped": true }` without recording.
+
+Members use the existing `record_member_view` RPC. Its identity comes
+from the verified session's `auth.uid()`; a request cannot choose a viewer.
+Anonymous requests use `record_page_view` on a dedicated client that
+forwards only the validated original User-Agent and trusted client IP.
+This preserves separate visitors when they share a User-Agent. Trust is
+disabled by default. On Vercel, `VERCEL=1` selects the platform-forwarded
+IP. Self-hosted deployments may set
+`VIEW_RECORDING_TRUST_FORWARDED_FOR=1` **only behind a proxy that replaces
+client-supplied forwarded headers**. Missing or invalid identity skips
+anonymous recording; it never invents a shared fingerprint. Next may
+supply the socket peer IP when no forwarded header was received.
+
+The existing database recorder remains the authority for 30-minute
+identity-and-subject deduplication, including concurrent calls and app
+restarts. The app adds a bounded, hashed, 60-second anonymous throttle.
+Raw IPs and User-Agents are never logged or persisted. Anonymous rows
+contain a subject-scoped hash; member rows contain their own `viewer_id`.
+Raw `page_views` rows remain unreadable to anonymous and authenticated
+clients. The public anon RPC remains directly callable, so its existing
+identity-spoofing risk still requires deployment-level rate limiting.
+
+`ViewTracker` records published profiles and events after mount.
+`WorkViewTracker` waits until its gallery sentinel enters the viewport;
+artist pages mount it only when both the profile and work are published.
+The browser coalesces requests already in flight and stores a bounded
+30-minute session suppression entry **only after a 2xx response**,
+including 204. Network errors and non-2xx responses allow the next call
+to retry. Storage failures and recording failures never interrupt reading.
+
+Tests: `src/lib/view-throttle*.spec.ts` cover bounded reads, cancellation,
+identity validation, throttling and tracker retries. The real production
+HTTP suite `tests/discovery/05-view-api.spec.ts` uses app port 3102 and the
+current worktree's local Supabase stack. It checks separate anonymous
+identities, repeats and concurrent calls, member UIDs, publication and
+owner visibility, page tracker mounting, malformed and cross-origin
+requests, absent User-Agent headers, untrusted mode, and a never-ended
+2 KiB chunked request returning 400 within two seconds. It restarts the
+same app port for untrusted mode, cleans up its fixtures, and rebuilds
+when application inputs or `.env.local` are newer than the build.

@@ -34,6 +34,7 @@ export type ViewSubjectType = "event" | "profile" | "portfolio_item";
 const STORAGE_PREFIX = "happenfolk:views:";
 const WINDOW_MS = 30 * 60 * 1000; // matches the DB dedupe window
 const MAX_TRACKED_KEYS = 200;
+const pendingSubjects = new Set<string>();
 
 function storageAvailable(): Storage | null {
   try {
@@ -93,18 +94,23 @@ function markSeen(subjectKey: string): void {
 /** Posts the view once per window; all failures are silent by design. */
 export function recordView(subjectType: ViewSubjectType, subjectId: string): void {
   const subjectKey = `${subjectType}:${subjectId}`;
-  if (suppressed(subjectKey)) return;
-  markSeen(subjectKey);
+  if (suppressed(subjectKey) || pendingSubjects.has(subjectKey)) return;
+  pendingSubjects.add(subjectKey);
   try {
     void fetch("/api/views", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ subjectType, subjectId }),
       keepalive: true,
+    }).then((response) => {
+      if (response.ok) markSeen(subjectKey);
     }).catch(() => {
       // view counting must never disturb the page
+    }).finally(() => {
+      pendingSubjects.delete(subjectKey);
     });
   } catch {
+    pendingSubjects.delete(subjectKey);
     // fetch itself unavailable (ancient browser): skip silently
   }
 }
