@@ -3,7 +3,8 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
-export const taskBase = "http://127.0.0.1:3103";
+const port = Number(process.env.TEST_APP_PORT) || 3103;
+export const taskBase = `http://127.0.0.1:${port}`;
 
 function newestInput(target: string): number {
   if (!existsSync(target)) return 0;
@@ -13,7 +14,7 @@ function newestInput(target: string): number {
   return statSync(target).mtimeMs;
 }
 
-/** Own only the assigned Task B port; never reuse or terminate another server. */
+/** Own only the configured test port; never reuse or terminate another server. */
 export async function startTaskApp(): Promise<{ close: () => Promise<void> }> {
   const root = process.cwd();
   const next = path.join(root, "node_modules/next/dist/bin/next");
@@ -25,9 +26,9 @@ export async function startTaskApp(): Promise<{ close: () => Promise<void> }> {
   await new Promise<void>((resolve, reject) => {
     const probe = net.createServer();
     probe.once("error", reject);
-    probe.listen(3103, "127.0.0.1", () => probe.close(() => resolve()));
+    probe.listen(port, "127.0.0.1", () => probe.close(() => resolve()));
   });
-  const child = spawn(process.execPath, [next, "start", "-p", "3103", "-H", "127.0.0.1"], {
+  const child = spawn(process.execPath, [next, "start", "-p", String(port), "-H", "127.0.0.1"], {
     cwd: root, stdio: "ignore", env: { ...process.env, NODE_ENV: "production" },
   });
   const close = async () => {
@@ -38,7 +39,7 @@ export async function startTaskApp(): Promise<{ close: () => Promise<void> }> {
     });
   };
   for (let attempt = 0; attempt < 120; attempt += 1) {
-    if (child.exitCode !== null) throw new Error(`Task B server exited: ${child.exitCode}`);
+    if (child.exitCode !== null) throw new Error(`Compliance server exited: ${child.exitCode}`);
     try {
       const response = await fetch(`${taskBase}/api/likes`);
       if (response.status === 405) return { close };
@@ -46,5 +47,5 @@ export async function startTaskApp(): Promise<{ close: () => Promise<void> }> {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   await close();
-  throw new Error("Task B server did not become ready on port 3103");
+  throw new Error("Compliance server did not become ready on the configured port");
 }
