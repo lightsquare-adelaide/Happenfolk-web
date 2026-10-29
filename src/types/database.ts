@@ -281,6 +281,7 @@ export type Database = {
           id: string
           is_hidden: boolean
           location: string | null
+          open_to_collaborate: boolean
           price_cents: number
           search_vector: unknown
           starts_at: string
@@ -299,6 +300,7 @@ export type Database = {
           id?: string
           is_hidden?: boolean
           location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at: string
@@ -317,6 +319,7 @@ export type Database = {
           id?: string
           is_hidden?: boolean
           location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at?: string
@@ -713,12 +716,15 @@ export type Database = {
           created_at: string
           display_name: string
           handle: string
+          headline: string | null
           id: string
           is_hidden: boolean
+          location: string | null
           open_to_collaborate: boolean
           published: boolean
           search_vector: unknown
           updated_at: string
+          website: string | null
         }
         Insert: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
@@ -729,12 +735,15 @@ export type Database = {
           created_at?: string
           display_name: string
           handle: string
+          headline?: string | null
           id: string
           is_hidden?: boolean
+          location?: string | null
           open_to_collaborate?: boolean
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Update: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
@@ -745,12 +754,15 @@ export type Database = {
           created_at?: string
           display_name?: string
           handle?: string
+          headline?: string | null
           id?: string
           is_hidden?: boolean
+          location?: string | null
           open_to_collaborate?: boolean
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {
@@ -1038,7 +1050,10 @@ export type Database = {
         Args: { p_force_fail: boolean }
         Returns: undefined
       }
-      settle_order: { Args: { p_order_id: string }; Returns: string }
+      settle_order: {
+        Args: { p_force_fail?: boolean; p_order_id: string }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       subject_is_public: {
