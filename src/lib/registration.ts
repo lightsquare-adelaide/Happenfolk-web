@@ -15,6 +15,7 @@ export function canRegisterWithoutPayment(event: PublicEvent): boolean {
 
 /** Keep raw Postgres/Supabase errors out of the UI. */
 export function registrationErrorMessage(message: string): string {
+  if (message.includes("REGISTRATION_CANCELLED")) return "Register again before paying for this cancelled registration.";
   if (message.includes("EVENT_FULL")) return "This event has no places left.";
   if (message.includes("EVENT_NOT_FOUND_OR_NOT_PUBLISHED")) {
     return "This event is no longer available for registration.";

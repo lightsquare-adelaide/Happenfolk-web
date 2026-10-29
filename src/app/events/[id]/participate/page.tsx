@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { secondaryButtonClass } from "@/components/field";
 import { BRAND } from "@/lib/brand";
 import { formatEventDate } from "@/lib/dashboard";
-import { canRegisterWithoutPayment, isUuid } from "@/lib/registration";
+import { isUuid } from "@/lib/registration";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ParticipateForm } from "../../participate-form";
 
@@ -37,10 +37,8 @@ export default async function ParticipatePage({ params }: Props) {
         <h2 className="mt-6 break-words text-2xl font-semibold md:text-3xl">{event.title}</h2>
         <p className="mt-4 text-sm leading-7 text-muted">{formatEventDate(event.starts_at)} · {event.location || "Location to be confirmed"}</p>
       </header>
-      <section aria-label="Free event registration" className="mt-10 max-w-2xl border border-line bg-surface p-6 sm:p-8">
-        {!canRegisterWithoutPayment(event) ? (
-          <p role="status" className="text-base leading-7">Paid event booking is not available yet. No payment will be taken.</p>
-        ) : !user ? (
+      <section aria-label="Event registration" className="mt-10 max-w-2xl border border-line bg-surface p-6 sm:p-8">
+        {!user ? (
           <div className="space-y-5">
             <h3 className="font-display text-3xl">Sign in to participate.</h3>
             <p className="leading-7 text-muted">An account is required to save your place and manage your registration.</p>
@@ -50,9 +48,9 @@ export default async function ParticipatePage({ params }: Props) {
           </div>
         ) : (
           <div className="space-y-5">
-            <h3 className="font-display text-3xl">Reserve your free place.</h3>
-            <p className="leading-7 text-muted">You will see your confirmed place in Your studio → My registrations. No payment is required.</p>
-            <ParticipateForm eventId={event.id} />
+            <h3 className="font-display text-3xl">{event.price_cents > 0 ? "Reserve your place." : "Reserve your free place."}</h3>
+            <p className="leading-7 text-muted">{event.price_cents > 0 ? "Continue to a simulated payment. No money moves and no card details are collected." : "You will see your confirmed place in Your studio → My registrations. No payment is required."}</p>
+            <ParticipateForm eventId={event.id} priceCents={event.price_cents} />
           </div>
         )}
       </section>

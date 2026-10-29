@@ -22,6 +22,11 @@ export default async function MyRegistrationsPage({ searchParams }: Props) {
   const eventResults = eventIds.length
     ? await supabase.from("events").select("id, title, starts_at").in("id", eventIds)
     : { data: [], error: null };
+  const registrationIds = (rows ?? []).map((row) => row.id);
+  const orderResults = registrationIds.length
+    ? await supabase.from("orders").select("id, registration_id, status, created_at")
+        .eq("member_id", user.id).in("registration_id", registrationIds).order("created_at", { ascending: false })
+    : { data: [], error: null };
   const eventById = new Map((eventResults.data ?? []).map((event) => [event.id, event]));
   const { notice } = await searchParams;
   const notices: Record<string, string> = {
@@ -41,7 +46,7 @@ export default async function MyRegistrationsPage({ searchParams }: Props) {
       {notice && notices[notice] ? (
         <p role="status" className="mt-8 border border-brand-line bg-brand-soft px-5 py-4 text-sm leading-6 text-foreground">{notices[notice]}</p>
       ) : null}
-      {error || eventResults.error ? (
+      {error || eventResults.error || orderResults.error ? (
         <p role="alert" className="mt-8 border border-danger bg-danger-soft p-5 text-danger">Could not load your registrations. Refresh to try again.</p>
       ) : rows?.length ? (
         <ul className="mt-10 divide-y divide-line border-y border-line">
@@ -54,6 +59,12 @@ export default async function MyRegistrationsPage({ searchParams }: Props) {
                   <h2 className="break-words font-sans text-xl font-semibold">{event?.title ?? "Event unavailable"}</h2>
                   {event?.starts_at ? <p className="text-sm text-muted">{formatEventDate(event.starts_at)}</p> : null}
                   <p className="text-sm">Status: <strong>{registrationStatusLabel(row.status)}</strong></p>
+                  {(orderResults.data ?? []).filter((order) => order.registration_id === row.id).map((order) => (
+                    <p key={order.id} className="text-sm">
+                      Order: <strong>{order.status}</strong>{" · "}
+                      <Link href={`/dashboard/orders/${order.id}`} className="inline-block py-2 underline underline-offset-4">{order.status === "pending" && row.status !== "cancelled" ? "Continue simulated payment" : "View order"}</Link>
+                    </p>
+                  ))}
                   {event ? <Link href={`/events/${event.id}`} className="inline-block py-2 text-sm underline underline-offset-4">View event</Link> : null}
                 </div>
                 {row.status !== "cancelled" ? <CancelRegistrationForm registrationId={row.id} /> : null}
