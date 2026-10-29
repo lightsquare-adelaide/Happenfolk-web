@@ -33,7 +33,7 @@ export async function seedMedia(client) {
     checked(await client.from("events").update({ cover_path: path }).eq("id", e.id), "wire cover"); n++;
   }
   for (const [i, item] of items.entries()) {
-    for (const [variant, width, height] of [["medium", 960, 720], ["small", 320, 240]]) {
+    for (const [variant, width, height] of [["medium", 960, 720], ["small", 480, 360]]) {
       const path = `${item.profile_id}/sample/${item.id}-${variant}.webp`;
       await upload("media", path, await image(i, width, height)); n++;
     }

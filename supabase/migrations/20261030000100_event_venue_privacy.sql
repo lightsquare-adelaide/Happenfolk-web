@@ -115,4 +115,3 @@ $$;
 
 revoke execute on function public.search_events(text, smallint, integer) from public;
 grant execute on function public.search_events(text, smallint, integer) to anon, authenticated, service_role;
-
