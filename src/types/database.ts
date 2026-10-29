@@ -940,7 +940,10 @@ export type Database = {
         Args: { p_force_fail: boolean }
         Returns: undefined
       }
-      settle_order: { Args: { p_order_id: string }; Returns: string }
+      settle_order: {
+        Args: { p_force_fail?: boolean; p_order_id: string }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       toggle_like: {
