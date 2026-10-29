@@ -23,11 +23,12 @@ values ('00000000-0000-0000-0000-000000000000',${quote(artist.id)},'authenticate
   lines.push(`update public.profiles set ${Object.entries(profile).map(([k, v]) => `${k}=${quote(v)}`).join(",")} where id=${quote(id)};`);
   lines.push(`insert into auth.identities (id,provider_id,user_id,identity_data,provider,created_at,updated_at) values (${quote(id)},${quote(id)},${quote(id)},${quote(JSON.stringify({ sub: id, email: artist.email }))}::jsonb,'email',now(),now()) on conflict do nothing;`);
 }
-const { events, items, media, collaborators } = sampleContent();
+const referenceTime = Date.UTC(2026, 0, 1);
+const { events, items, media, collaborators } = sampleContent(undefined, referenceTime);
 // Relative instants keep a fresh reset useful at any date.
 insert("public.events", events);
 for (const e of events) {
-  const offset = Math.round((new Date(e.starts_at).valueOf() - Date.now()) / 86400000);
+  const offset = Math.round((new Date(e.starts_at).valueOf() - referenceTime) / 86400000);
   lines.push(`update public.events set starts_at=now()+interval '${offset} days', ends_at=now()+interval '${offset} days 2 hours' where id=${quote(e.id)};`);
 }
 insert("public.portfolio_items", items);
