@@ -22,10 +22,11 @@ Lightsquare Adelaide Project Proposal (final draft):
 - Events carrying a name, location, date, time, optional images and at least one
   organising artist, **editable by every listed collaborator**.
 
-Features in the proposal's **Future Implementation** tier — messaging,
-opportunities and applications, team formation, follows/feeds/comments, MFA,
-three-level privacy, moderation console, audit logs, payments and Stripe — are
-**not built here**. They are preserved in the Future Implementation Register.
+The integrated implementation also includes free RSVP, simulated paid orders,
+public work details, likes, collaboration availability, staff moderation, legal
+pages and 90-day view retention with monthly aggregates. Payments are a simulator;
+real charges, Stripe, messaging, follows/comments and an admin audit log are not
+implemented.
 
 Every pull request must tag the requirement it serves with its source layer.
 
@@ -34,7 +35,7 @@ Every pull request must tag the requirement it serves with its source layer.
 | Tool | Version | Install |
 |---|---|---|
 | Node.js | 22 (see `.nvmrc`) | `brew install node@22` or `nvm install` |
-| Supabase CLI | latest | `brew install supabase/tap/supabase` |
+| Supabase CLI | repo-pinned 2.116.0 | `npx supabase` after `npm ci` |
 | Colima + Docker CLI | latest | `brew install colima docker` |
 | GitHub CLI | latest | `brew install gh` |
 
@@ -59,9 +60,10 @@ npm ci
 cp .env.example .env.local   # then fill in — ask the Project Lead for values
 
 colima start            # one-time per boot; provides the Docker socket
-supabase start          # local Postgres, Auth, Storage and Studio
-supabase db reset       # replays every migration from scratch
+npx supabase start      # local Postgres, Auth, Storage and Studio
+npx supabase db reset   # replays migrations and loads fictional sample data
 
+npm run seed:media      # upload generated sample placeholders
 npm run dev             # http://localhost:3000
 ```
 
@@ -80,9 +82,31 @@ Put those in `.env.local` for local work.
 | `npm run db:start` | Start the local Supabase stack |
 | `npm run db:reset` | Drop and replay all migrations |
 | `npm run db:lint` | Lint migrations |
+| `npm run seed:media` | Upload generated images for the marked local sample dataset |
+| `npm run smoke` | Read-only public/authorization probe; set `BASE_URL` |
+| `npm run e2e` | Live temporary-account journey with cleanup; seeded staging/local target |
+| `npm run smoke:browser` | Hydrated form/error-boundary probe with Chrome/Chromium |
+| `npm run kill:next` | Stop only Next servers in this exact checkout |
+| `npm run test:integration` | Seed, public surfaces and live HTTP journey |
+| `npm run test:compliance` | Privacy, moderation, retention and accessibility checks |
 | `npm run db:types` | Regenerate `src/types/database.ts` from the local schema |
 
 Run `npm run db:types` after any migration and commit the result.
+
+## Operations and verification
+
+Read the [runbook](docs/runbook.md) for local environment mapping, deployment,
+optional guarded remote sample seeding, smoke/e2e and rollback. Use the
+[release checklist](docs/release-checklist.md) for handover, the
+[architecture](docs/architecture.md) for data/access/test boundaries, and the
+[defect log](docs/defect-log.md) for integrated fixes and remaining limitations.
+
+`npm test` runs unit suites. DB suites run through their named commands against
+a local stack; integration expects a fresh sample seed plus `seed:media` and
+starts its own production server. Export `SUPABASE_DB_URL` or use
+`node --env-file=.env.local scripts/check-invariants.mjs` for local invariants.
+Sample data is fictional, includes private/hidden fixtures, grants no staff
+access and leaves `demo.artist@happenfolk.test` available for the legacy demo.
 
 ## Secrets
 

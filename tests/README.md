@@ -1,14 +1,22 @@
 # Tests
 
-Two kinds of test are planned, matching the proposal's evaluation criteria:
+`npm test` runs unit tests without a live database. Access, auth, payments, media,
+events, portfolio, discovery, integration and compliance use their named npm
+scripts against the local Supabase project in `supabase/config.toml`.
 
-- **Access-rule tests (E2)** — the ones that carry assessment weight:
-  - a non-collaborator cannot edit an event
-  - every listed collaborator *can* edit an event
-  - a non-owner cannot modify a portfolio
-  - an anonymous visitor can read public portfolios and events, and write nothing
-- **Functional tests (E1)** — each confirmed Section 3.1 item works end to end.
+Copy local credentials to `.env.local`; see [the runbook](../docs/runbook.md).
+The access harness obtains local project URLs from the pinned CLI; compliance
+fixtures also need `SUPABASE_SERVICE_ROLE_KEY`. Permission checks use real
+anonymous/member clients. Privileged SQL/service connections create fixtures and
+clean them up. Media fixtures need ffmpeg and exiftool.
 
-Access-rule tests run against the local Supabase stack (`supabase start`), using
-separate authenticated clients per user so Row-Level Security is genuinely
-exercised rather than bypassed by the service-role key.
+Run `npx supabase db reset` and `npm run seed:media` before integration. Integration
+reuses the existing auth production-server lifecycle, rebuilding stale inputs;
+set `TEST_APP_PORT` to reserve a port and do not start another server there.
+Its live journey runs the same smoke/e2e scripts used by operators and checks
+cleanup. Compliance covers legal disclosures, moderation, retention and basic
+source-level accessibility guards. Browser smoke remains a separate command
+requiring Chrome/Chromium; it is not a substitute for manual accessibility review.
+
+CI preserves the web, invariants and database jobs and runs all DB suites in
+stack jobs. See [architecture](../docs/architecture.md) for suite boundaries.

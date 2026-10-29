@@ -41,14 +41,15 @@ const client = createServerClient(
     },
   },
 );
-const signUp = await client.auth.signUp({ email, password });
-if (signUp.error && signUp.error.message.toLowerCase().includes("already")) {
-  await client.auth.signInWithPassword({ email, password });
-} else if (signUp.error) {
-  throw new Error(`signUp failed: ${signUp.error.message}`);
+let authentication = await client.auth.signUp({ email, password });
+if (authentication.error && authentication.error.message.toLowerCase().includes("already")) {
+  authentication = await client.auth.signInWithPassword({ email, password });
+}
+if (authentication.error || !authentication.data.user || !authentication.data.session) {
+  throw new Error(`Authentication failed: ${authentication.error?.message ?? "no confirmed session"}`);
 }
 const cookie = jar.join("; ");
-const userId = signUp.data.user?.id;
+const userId = authentication.data.user.id;
 console.log("session ready for", email);
 
 // 2. Complete the profile straight in the database (RLS-checked as owner).
@@ -63,7 +64,8 @@ if (userId) {
   const { error } = await client.from("profiles").update(profile).eq("id", userId);
   if (error) throw new Error(`profile update failed: ${error.message}`);
 }
-const { data: me } = await client.from("profiles").select("handle").eq("id", signUp.data.user?.id ?? "").single();
+const { data: me } = await client.from("profiles").select("handle").eq("id", userId).single();
+if (!me?.handle) throw new Error("Could not load the demo profile handle");
 console.log("profile published at handle:", me?.handle);
 
 // 3. Synthesise demo images (GPS included: the public derivatives must strip it).
@@ -88,6 +90,7 @@ try {
   avatarForm.append("file", new Blob([await readFile(avatar)], { type: "image/jpeg" }), "avatar.jpg");
   const avatarRes = await post("/api/media/avatar", avatarForm, true);
   console.log("avatar:", avatarRes.status, (await avatarRes.text()).slice(0, 90));
+  if (!avatarRes.ok) throw new Error("Demo avatar upload failed");
 
   // 5. One published artwork with alt text.
   const artForm = new FormData();
@@ -96,10 +99,12 @@ try {
   const uploadRes = await post("/api/media/upload", artForm, true);
   const uploadBody = await uploadRes.json();
   console.log("upload:", uploadRes.status, JSON.stringify(uploadBody).slice(0, 90));
+  if (!uploadRes.ok || !uploadBody.itemId) throw new Error("Demo artwork upload failed");
   const publishRes = await post("/api/media/publish", { itemId: uploadBody.itemId, altText: "Synthesised Adelaide test frame for the local demo" });
   console.log("publish:", publishRes.status);
+  if (!publishRes.ok) throw new Error("Demo artwork publish failed");
 
-  console.log(`\nDemo ready. Log in at ${appBase}/login — ${email} / ${password}`);
+  console.log(`\nDemo ready. Log in at ${appBase}/login — ${email} (use the configured demo password)`);
   console.log(`Public page: ${appBase}/artists/${me?.handle}`);
 } finally {
   await rm(dir, { recursive: true, force: true });
