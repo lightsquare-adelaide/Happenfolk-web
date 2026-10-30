@@ -38,6 +38,11 @@ export async function updateProfile(
     return { error: "Couldn’t save your profile. Please try again.", saved: false };
   }
 
-  revalidatePath("/dashboard", "layout");
+  // The site header with the member's handle lives in the ROOT layout.
+  // Revalidating only "/dashboard" never refreshed that root segment, so
+  // a saved handle kept showing the old value in the header until a full
+  // page reload. Revalidate from the root so every surface (header,
+  // footer, dashboard) re-renders with the saved profile.
+  revalidatePath("/", "layout");
   return { error: null, saved: true };
 }
