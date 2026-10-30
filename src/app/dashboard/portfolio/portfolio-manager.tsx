@@ -324,6 +324,23 @@ export function PortfolioManager({
         ) : null}
       </header>
 
+      {/* Two separate switches: the profile and each work are published
+          independently (profiles.published vs portfolio_items.published).
+          Members who publish a work while the profile is private see a
+          public-looking success message but an unreachable artist page —
+          the pilot's top confusion. This persistent notice states the
+          real visibility rule and links to the fix. The switches
+          themselves are NOT merged and database rules are unchanged. */}
+      {handle && !profilePublished ? (
+        <FormAlert tone="warning">
+          Your profile is private, so published works are not visible yet. {" "}
+          <Link prefetch={false} href="/dashboard/profile" className="underline underline-offset-4">
+            Publish your profile
+          </Link>{" "}
+          to make your artist page reachable.
+        </FormAlert>
+      ) : null}
+
       <div aria-live="polite" className="flex flex-col gap-2">
         {message ? (
           <FormAlert tone={message.tone}>
@@ -470,11 +487,19 @@ function WorkCard(props: CardProps) {
             Status: <span className="font-medium text-foreground">{work.published ? "Published" : "Draft"}</span>
           </p>
           {props.handle ? (
-            <Link prefetch={false} href={`/artists/${props.handle}`} className="mt-1 inline-block text-sm underline underline-offset-4">
-              {work.published
-                ? "View public page"
-                : props.profilePublished ? "Preview public page" : "Publish your profile first"}
-            </Link>
+            work.published && props.profilePublished ? (
+              <Link prefetch={false} href={`/artists/${props.handle}`} className="mt-1 inline-block text-sm underline underline-offset-4">
+                View public page
+              </Link>
+            ) : props.profilePublished ? (
+              <Link prefetch={false} href={`/artists/${props.handle}`} className="mt-1 inline-block text-sm underline underline-offset-4">
+                Preview public page
+              </Link>
+            ) : (
+              <Link prefetch={false} href="/dashboard/profile" className="mt-1 inline-block text-sm underline underline-offset-4">
+                Publish your profile first
+              </Link>
+            )
           ) : null}
         </div>
       </header>
@@ -504,6 +529,11 @@ function WorkCard(props: CardProps) {
         )}
         {!work.published && work.assets.length === 0 ? (
           <span className="text-sm text-muted">Add media before publishing.</span>
+        ) : null}
+        {!work.published && !props.profilePublished ? (
+          <span className="text-sm text-muted">
+            Your profile is private — publishing this work will not make it visible until you publish your profile.
+          </span>
         ) : null}
         {!work.published && missingAlt.length > 0 ? (
           <span className="text-sm text-danger">
