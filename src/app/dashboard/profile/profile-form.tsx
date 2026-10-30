@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Field, inputClass, primaryButtonClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
