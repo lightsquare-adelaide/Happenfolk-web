@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Field, inputClass, primaryButtonClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { handleProblem } from "@/lib/onboarding";
@@ -15,11 +16,21 @@ type Profile = {
 };
 
 export function ProfileForm({ profile, categories }: { profile: Profile; categories: Category[] }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<ProfileState, FormData>(updateProfile, { error: null, saved: false });
   const [handle, setHandle] = useState(profile.handle);
   const [availability, setAvailability] = useState<"idle" | "checking" | "free" | "taken">("idle");
   const problem = handleProblem(handle);
   const unchanged = handle === profile.handle;
+
+  // A successful save must be reflected immediately in the site header
+  // (root layout), which shows the handle: re-fetch the current route
+  // tree without a document reload, keeping the saved message and every
+  // typed field intact. Depends on the action-result object so a SECOND
+  // save (saved stays true) also refreshes.
+  useEffect(() => {
+    if (state.saved) router.refresh();
+  }, [state, router]);
 
   useEffect(() => {
     if (problem || unchanged) return;

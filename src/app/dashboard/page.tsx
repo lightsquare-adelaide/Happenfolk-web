@@ -102,6 +102,17 @@ export default async function DashboardPage() {
             </li>
           ))}
         </StudioSection>
+        {/* W2: participation history entry point, link only — the page owns its queries. */}
+        <section aria-label="History" className="min-w-0">
+          <div className="flex min-h-52 min-w-0 flex-col items-start justify-center gap-4 border border-dashed border-line bg-surface p-6 sm:p-8">
+            <span aria-hidden="true" className="block h-1 w-10 bg-brand" />
+            <h2 className="font-display text-[32px] leading-tight">History</h2>
+            <p className="max-w-md text-sm leading-7 text-muted">
+              Everything you hosted, collaborated on or registered for — upcoming first, then the past.
+            </p>
+            <Link prefetch={false} href="/dashboard/history" className={secondaryButtonClass}>View history</Link>
+          </div>
+        </section>
       </div>
     </main>
   );
