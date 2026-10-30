@@ -213,5 +213,4 @@ Commands and evidence live in `taskdir/logs-D/` and `taskdir/screens-D/`:
 - Legal, privacy, licence and `/credits` pages and their footer links (X). The footer
   has an obvious insertion point; a link to a route that does not exist is worse than no
   link.
-- `package.json` name still reads `lightsquare-web`; renaming is a launch-readiness
-  decision, not a design one.
+- `package.json` name is now `happenfolk-web`.
