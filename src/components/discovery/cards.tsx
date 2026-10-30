@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatEventDate } from "@/lib/dashboard";
 import { initials } from "@/lib/discovery";
 import type { ArtistCardData, EventCard, WorkCardData } from "./data";
+import { formatEventPrice } from "@/lib/price";
 
 /* Cards share one rule: the image box has a fixed aspect ratio, so the layout
    never shifts when pictures arrive, and the whole card is one link. */
@@ -38,6 +39,7 @@ export function EventTile({ event, category, eager = false }: {
       </div>
       <div className="mt-4 flex min-h-5 flex-wrap items-center gap-x-4 gap-y-1">
         {category ? <p className="text-xs text-muted">{category}</p> : null}
+        <p className="text-xs font-medium uppercase tracking-wider">{formatEventPrice(event.priceCents)}</p>
         {event.trending ? <Tag>Trending</Tag> : null}
       </div>
       <h3 className="mt-2 break-words font-sans text-xl font-medium leading-7 underline-offset-4 group-hover:underline">{event.title}</h3>

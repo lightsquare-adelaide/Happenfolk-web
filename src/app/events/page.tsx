@@ -5,14 +5,16 @@ import { BRAND } from "@/lib/brand";
 import { formatEventDate } from "@/lib/dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { RetryEvents } from "./retry-events";
+import { formatEventPrice } from "@/lib/price";
 
 export const metadata = { title: `Events — ${BRAND.name}` };
 
 type ListedEvent = {
   id: string; title: string; location: string | null;
   starts_at: string; cover_path: string | null; category_id: number | null;
+  price_cents: number | null;
 };
-const fields = "id, title, location, starts_at, cover_path, category_id";
+const fields = "id, title, location, starts_at, cover_path, category_id, price_cents";
 const day = new Intl.DateTimeFormat("en-AU", { day: "2-digit", timeZone: "Australia/Adelaide" });
 const month = new Intl.DateTimeFormat("en-AU", { month: "short", year: "numeric", timeZone: "Australia/Adelaide" });
 
@@ -88,9 +90,12 @@ export default async function EventsPage() {
                         </div>
                       )}
                     </div>
-                    {event.category_id && categoryNames.get(event.category_id) ? (
-                      <p className="mt-4 text-xs text-muted">{categoryNames.get(event.category_id)}</p>
-                    ) : null}
+                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
+                      {event.category_id && categoryNames.get(event.category_id) ? (
+                        <p className="text-xs text-muted">{categoryNames.get(event.category_id)}</p>
+                      ) : null}
+                      <p className="text-xs font-medium uppercase tracking-wider">{formatEventPrice(event.price_cents)}</p>
+                    </div>
                     <h3 className="mt-3 break-words font-sans text-xl font-medium leading-7 underline-offset-4 group-hover:underline">{event.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted"><time dateTime={event.starts_at}>{formatEventDate(event.starts_at)}</time></p>
                     <p className="mt-1 break-words text-sm leading-6 text-muted">{event.location || (account.data.user ? "Location to be confirmed" : "Sign in to see the venue")}</p>
