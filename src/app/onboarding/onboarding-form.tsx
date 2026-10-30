@@ -1,12 +1,29 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { FormAlert } from "@/components/form-alert";
+import { Field, inputClass, primaryButtonClass, selectClass } from "@/components/field";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { handleProblem, type AccountKind } from "@/lib/onboarding";
 import { completeOnboarding, type OnboardingState } from "./actions";
 
 type Category = { id: number; name: string };
 
+type Availability = "idle" | "checking" | "free" | "taken";
+
+/**
+ * Onboarding: account kind, category, public handle.
+ *
+ * All logic is the audited baseline (useActionState against the existing
+ * server action, a 300ms debounced handle_available RPC asked as the anonymous
+ * public, and the "your own prefilled handle is not taken" rule). This file
+ * changes presentation only.
+ *
+ * The live availability line keeps the strings the acceptance journey reads
+ * ("Already taken", "Available"), and it is wired to the handle field through
+ * aria-describedby as well as aria-live, so the result is announced and also
+ * belongs to the field it describes.
+ */
 export function OnboardingForm({
   categories,
   currentHandle,
@@ -21,106 +38,153 @@ export function OnboardingForm({
     { error: null },
   );
   const [handle, setHandle] = useState(currentHandle ?? "");
-  const [availability, setAvailability] = useState<"idle" | "checking" | "free" | "taken">(
-    "idle",
-  );
-  // Derived at render: when the handle violates the shape rules we
-  // never even query — and we avoid synchronous setState in the effect
+  const [availability, setAvailability] = useState<Availability>("idle");
+
+  // Derived at render: when the handle violates the shape rules we never even
+  // query, and we avoid synchronous setState in the effect
   // (react-hooks/set-state-in-effect).
   const problem = handleProblem(handle);
+  const unchanged = handle === currentHandle;
 
-  // Live availability check: debounce 300ms, then ask the SECURITY DEFINER RPC as
-  // the anonymous public would — never by reading the profiles table.
+  // Live availability check: debounce 300ms, then ask the SECURITY DEFINER RPC
+  // as the anonymous public would, never by reading the profiles table.
   useEffect(() => {
-    if (problem) return;
+    if (problem || unchanged) return;
+    let active = true;
     const timer = setTimeout(async () => {
       setAvailability("checking");
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase.rpc("handle_available", { p_handle: handle });
+      if (!active) return;
       if (error) {
         setAvailability("idle");
         return;
       }
       setAvailability(data === true ? "free" : "taken");
     }, 300);
-    return () => clearTimeout(timer);
-  }, [handle, problem]);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [handle, problem, unchanged]);
+
+  const taken = !problem && !unchanged && availability === "taken";
+  const free = !problem && !unchanged && availability === "free";
+
+  const status = problem
+    ? problem
+    : unchanged
+      ? "This is your current handle"
+      : availability === "checking"
+        ? "Checking availability"
+        : free
+          ? "Available"
+          : taken
+            ? "Already taken"
+            : "";
+
+  const statusTone = problem
+    ? "text-danger"
+    : taken
+      ? "text-danger"
+      : free
+        ? "text-success"
+        : "text-muted";
 
   return (
-    <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
+    <form action={formAction} aria-busy={pending} className="flex w-full flex-col gap-6">
       <input type="hidden" name="next" value={nextPath} />
-      <fieldset className="flex flex-col gap-2 text-sm">
-        <legend className="mb-1">Account type</legend>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="accountKind" value="individual" defaultChecked required />
-          Individual
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="accountKind" value="organisation" required />
-          Organisation
-        </label>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-sm font-medium">Account type</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-start gap-3 border border-line-strong bg-surface p-3 transition-colors duration-200 hover:border-brand has-[:checked]:border-brand has-[:checked]:bg-brand-soft">
+            <input
+              type="radio"
+              name="accountKind"
+              value="individual"
+              defaultChecked
+              required
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)]"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-semibold">Individual</span>
+              <span className="text-xs leading-5 text-muted">One artist, one profile</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 border border-line-strong bg-surface p-3 transition-colors duration-200 hover:border-brand has-[:checked]:border-brand has-[:checked]:bg-brand-soft">
+            <input
+              type="radio"
+              name="accountKind"
+              value="organisation"
+              required
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)]"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-semibold">Organisation</span>
+              <span className="text-xs leading-5 text-muted">A collective, studio or venue</span>
+            </span>
+          </label>
+        </div>
       </fieldset>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Category
-        <select
-          name="categoryId"
-          required
-          defaultValue=""
-          className="rounded-md border border-line bg-surface px-3 py-2"
-        >
+      <Field label="Category" hint="The discipline your work is filed under. You can change it later.">
+        <select name="categoryId" required defaultValue="" className={selectClass}>
           <option value="" disabled>
-            Choose your category…
+            Choose your category
           </option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
             </option>
           ))}
         </select>
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Handle (your public page address: 3–30 lowercase letters, digits or underscores)
+      <Field label="Handle" hint="3 to 30 lowercase letters, digits or underscores" mono>
         <input
           name="handle"
           required
           value={handle}
-          onChange={(e) => setHandle(e.target.value.toLowerCase())}
-          className="rounded-md border border-line bg-surface px-3 py-2 font-mono"
+          onChange={(event) => {
+            setHandle(event.target.value.toLowerCase());
+            setAvailability("idle");
+          }}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-describedby="handle-status"
+          className={inputClass}
         />
-      </label>
-      <p
-        aria-live="polite"
-        className={`text-xs ${
-          !problem && availability === "taken"
-            ? "text-red-600"
-            : !problem && availability === "free"
-              ? "text-green-700"
-              : "text-muted"
-        }`}
-      >
-        {problem ??
-          (availability === "checking"
-            ? "Checking…"
-            : availability === "free"
-              ? "✓ Available"
-              : availability === "taken"
-                ? "Already taken"
-                : "")}
-      </p>
+      </Field>
 
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
+      <div className="flex flex-col gap-1.5 border-l-2 border-line pl-3">
+        <p className="text-xs text-muted">
+          Your public address:{" "}
+          <span className="font-mono text-foreground">/artists/{handle || "handle"}</span>
+        </p>
+        <p id="handle-status" aria-live="polite" className={`text-sm font-medium ${statusTone}`}>
+          {status}
+        </p>
+      </div>
 
-      <button
-        type="submit"
-        disabled={pending || availability === "taken"}
-        className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {pending ? "Saving…" : "Finish and continue"}
-      </button>
+      {state.error ? <FormAlert tone="danger">{state.error}</FormAlert> : null}
+
+      <div className="flex flex-col gap-3">
+        <button
+          type="submit"
+          disabled={pending || taken || Boolean(problem)}
+          className={`${primaryButtonClass} w-full`}
+        >
+          {pending ? "Saving…" : "Finish and continue"}
+        </button>
+        <p className="text-xs leading-5 text-muted">
+          Your profile stays hidden until you publish it from the dashboard.
+        </p>
+      </div>
     </form>
   );
 }
 
+/** Kept so importing modules keep one source for the account kind union. */
 export type { AccountKind };

@@ -25,3 +25,28 @@ export function coverAsset(media: MediaRow[]): MediaRow | null {
       .sort((a, b) => a.position - b.position || rank(a) - rank(b))[0] ?? null
   );
 }
+
+export type PublicDisplayAsset = MediaRow & { smallPath: string | null };
+
+/** One display object per published asset, including H.264 video.
+ * Anonymous readers cannot read private original rows, so group only
+ * public derivatives using the existing pipeline's variant path stem.
+ */
+export function publicDisplayAssets(media: MediaRow[]): PublicDisplayAsset[] {
+  const groups = new Map<string, MediaRow[]>();
+  for (const asset of media) {
+    if (asset.bucket !== "media") continue;
+    const image = ["image/jpeg", "image/png", "image/webp"].includes(asset.content_type)
+      && ["medium", "small"].includes(asset.variant);
+    const video = asset.content_type === "video/mp4" && asset.variant === "display";
+    if (!image && !video) continue;
+    const stem = asset.path.replace(/-(?:small|medium|display)\.[^/.]+$/, "");
+    const group = groups.get(stem) ?? [];
+    group.push(asset);
+    groups.set(stem, group);
+  }
+  return [...groups.values()].map((group) => {
+    const preferred = [...group].sort((a, b) => rank(a) - rank(b) || a.path.localeCompare(b.path))[0];
+    return { ...preferred, smallPath: group.find((asset) => asset.variant === "small")?.path ?? null };
+  }).sort((a, b) => a.position - b.position || a.path.localeCompare(b.path));
+}

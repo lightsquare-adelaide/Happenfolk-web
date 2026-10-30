@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSameOriginRequest } from "@/lib/request-origin";
 
 /**
  * Logout as a plain HTML-form-friendly route handler: the header's
@@ -12,6 +13,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * unrelated ones survive.
  */
 export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Cross-origin sign-out requests are not allowed" }, { status: 403 });
+  }
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   const response = NextResponse.redirect(new URL("/", request.url), { status: 303 });

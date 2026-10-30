@@ -63,6 +63,31 @@ jobs:
       - name: Reset database
         run: supabase db reset
 
+      - name: Export local stack environment for DB suites
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync, writeFileSync } from 'node:fs';
+          const raw = execFileSync('supabase', ['status', '-o', 'env'], { encoding: 'utf8' });
+          const kv = Object.fromEntries([...raw.matchAll(/^([A-Z_]+)=(.*)$/gm)].map((m) => [m[1], m[2].replace(/^['"]|['"]$/g, '')]));
+          const values = {
+            NEXT_PUBLIC_SUPABASE_URL: kv.API_URL,
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: kv.ANON_KEY,
+            SUPABASE_SERVICE_ROLE_KEY: kv.SERVICE_ROLE_KEY,
+            SUPABASE_DB_URL: kv.DB_URL,
+            NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3105',
+            TEST_APP_PORT: '3105',
+          };
+          for (const key of ['ANON_KEY', 'SERVICE_ROLE_KEY']) console.log(`::add-mask::${kv[key]}`);
+          const content = Object.entries(values).map(([k, v]) => `${k}=${v}`).join('\n') + '\n';
+          appendFileSync(process.env.GITHUB_ENV, content);
+          writeFileSync('.env.local', content);
+          NODE
+
+      - name: Seed generated sample media
+        run: npm run seed:media
+
       - name: Check invariants
         run: npm run check:invariants
 
@@ -76,12 +101,51 @@ jobs:
           # zod env check rejects the URL at build time.
           export NEXT_PUBLIC_SUPABASE_URL="$(printf '%s\n' "$status" | grep '^API_URL=' | cut -d= -f2- | tr -d "'\"")"
           export NEXT_PUBLIC_SUPABASE_ANON_KEY="$(printf '%s\n' "$status" | grep '^ANON_KEY=' | cut -d= -f2- | tr -d "'\"")"
-          export NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+          export NEXT_PUBLIC_SITE_URL="http://127.0.0.1:3105"
           npm run build
         shell: bash
 
       - name: Auth-flow tests (middleware + sessions, real Next server)
         run: npm run test:auth
+
+      - name: Install synthesized-media fixture tools
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          # The runner's Azure mirror stalled while downloading fixture tools.
+          # Keep signed Ubuntu packages, using the official HTTPS archive.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i -E 's|https?://azure.archive.ubuntu.com/ubuntu/?|https://archive.ubuntu.com/ubuntu/|g' /etc/apt/apt-mirrors.txt
+          fi
+          sudo timeout --kill-after=15s 120s apt-get \
+            -o Acquire::Retries=1 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
+          sudo timeout --kill-after=15s 240s env DEBIAN_FRONTEND=noninteractive apt-get \
+            -o Acquire::Retries=1 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
+            install -y --no-install-recommends ffmpeg libimage-exiftool-perl
+          ffmpeg -version
+          exiftool -ver
+
+      - name: Media and profile integration (real storage and Next server)
+        run: npm run test:media
+
+      - name: Events rules and API integration (real stack and Next server)
+        run: npm run test:events
+
+      - name: Portfolio ordering and metadata integration (real stack)
+        run: npm run test:portfolio
+
+      - name: Discovery ranking and search integration (real stack)
+        run: npm run test:discovery
+
+      - name: Launch integration (seeded DB, production server, live HTTP journey)
+        run: npm run test:integration
+
+      - name: Compliance (retention, public disclosures, moderation, accessibility)
+        run: npm run test:compliance
+
+      - name: Stop local stack
+        if: always()
+        run: supabase stop
 
   database:
     name: Migrations lint

@@ -1,39 +1,369 @@
 @import "tailwindcss";
 
+/*
+ * Happenfolk design system (package D).
+ *
+ * Identity source: the team brand mockups in PR #22
+ * (docs/design/brand-mockups/mockups/styles.css) and the same tokens in PR #27,
+ * cross-read against DESIGN-REFS.md. Component architecture (Field, EmptyState,
+ * AuthShell, MobileNav, Reveal) is reused from the user's Lightsquare frontend and
+ * retinted to this brand. Decisions are documented in docs/design-system.md.
+ *
+ * Rules this file enforces:
+ *   1. Two voices only: condensed Archivo for display, Instrument Sans for body.
+ *      Both are self-hosted variable fonts (public/fonts, OFL). No third webfont.
+ *   2. One accent: rose. It appears as a fill carrying contrasting ink, or as
+ *      accent text. It never sits on top of artwork and never competes with a
+ *      second highlight colour.
+ *   3. Square corners everywhere except avatars, which stay circular. The radius
+ *      scale is zeroed on purpose, so existing `rounded-md` / `rounded-lg` markup
+ *      in other packages renders on brand without edits.
+ *   4. Light and dark are both first class. Theme = stored choice, else system.
+ *      Colours are declared with light-dark() and flip through `color-scheme`,
+ *      which the pre-paint bootstrap script sets (no flash of the wrong theme).
+ *   5. Motion is subtle, transform/opacity only, and always reduced-motion safe.
+ */
+
+/* Manual theme toggle: `dark:` follows the resolved data-theme, not the media
+   query, so a stored choice wins over the system setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------------------------------------------------------------- tokens */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Follow the system until the bootstrap script resolves a stored choice. */
+  color-scheme: light dark;
+
+  /* Ground and ink (brand sheet: white ground, near-black ink). */
+  --background: light-dark(#ffffff, #0b0b0c);
+  --foreground: light-dark(#0b0b0c, #f4f4f5);
+  --surface: light-dark(#ffffff, #17171a);
+  --tint: light-dark(#f4f4f5, #202024);
+
+  /* Hairlines decorate; --line-strong marks the boundary of a control and is
+     therefore held at 3:1 or better against the ground in both themes. */
+  --line: light-dark(#d4d4d8, #27272a);
+  --line-strong: light-dark(#84848c, #63636c);
+
+  --muted: light-dark(#52525b, #a1a1aa);
+
+  /* Rose accent. Light: #E5006D fill with white ink (4.61:1), #C40060 as text
+     (5.97:1). Dark: #FF3D8B fill with near-black ink (5.89:1); the same value
+     works as accent text (5.89:1 on the ground, 5.36:1 on a surface). */
+  --brand: light-dark(#e5006d, #ff3d8b);
+  --brand-hover: light-dark(#c40060, #ff61a3);
+  --on-brand: light-dark(#ffffff, #0b0b0c);
+  --brand-text: light-dark(#c40060, #ff3d8b);
+  --brand-soft: light-dark(#fce7f3, #33101f);
+  --brand-line: light-dark(#f4bcd4, #5c2237);
+
+  /* Status colours. Each text value clears 4.5:1 on the ground and on its own
+     soft background in both themes. */
+  --danger: light-dark(#b42318, #ff8f85);
+  --danger-soft: light-dark(#fbe9e7, #3a1a17);
+  --on-danger: light-dark(#ffffff, #2a0b08);
+  --success: light-dark(#166534, #4ade80);
+  --success-soft: light-dark(#e7f4ea, #10281a);
+  --warning: light-dark(#8a5300, #f5c24b);
+  --warning-soft: light-dark(#fdf3dc, #2e2411);
+
+  /* Focus ring is the accent, 3px, per the brand sheet. */
+  --ring: light-dark(#e5006d, #ff3d8b);
+
+  /* Scrim behind the mobile navigation disclosure. */
+  --overlay: light-dark(rgb(11 11 12 / 0.45), rgb(0 0 0 / 0.6));
+
+  /* Shell metrics. The header, the footer and every page container use
+     shell-wrap, so chrome and content share one left edge at every width. */
+  --shell-max: 80rem;
+  --shell-gutter: 1.25rem;
+
+  /* Motion. One easing curve, short durations, transform and opacity only. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+
+  /* Type stacks. The two faces are self-hosted variable fonts wired up by
+     next/font/local in layout.tsx; --hf-archivo and --hf-instrument are the
+     variables it publishes. The display stack is deliberately NOT registered
+     under Tailwind's --font-* namespace: `font-display` is a custom utility
+     below that carries the family AND the brand's condensed 62% width. */
+  --font-body: var(--hf-instrument), ui-sans-serif, system-ui, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-display-stack: var(--hf-archivo), "Archivo", "Arial Narrow",
+    ui-sans-serif, sans-serif;
+  --font-mono-stack: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------- theme map */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-tint: var(--tint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-muted: var(--muted);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-on-danger: var(--on-danger);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono-stack);
+
+  /* Legacy numeric ramp kept because surfaces owned by other packages still
+     reference it (links as text-brand-700, chips as bg-brand-100). Values
+     follow the same rose, per theme. brand-700 doubles as accent text. */
+  --color-brand-50: light-dark(#fdf2f8, #2a0c19);
+  --color-brand-100: light-dark(#fce7f3, #3d1225);
+  --color-brand-500: light-dark(#e5006d, #ff3d8b);
+  --color-brand-700: light-dark(#c40060, #ff3d8b);
+  --color-brand-900: light-dark(#831843, #ffa8cb);
 }
 
+/* Brand rule: square corners, circular avatars only. Zeroing the scale means
+   `rounded-*` utilities already present in other packages stay on brand.
+   `rounded-full` is not part of this scale and remains circular for avatars. */
 @theme {
-  /* Lightsquare brand ramp (P0 foundation tokens; tune in later stages). */
-  --color-brand-50: #faf5ff;
-  --color-brand-100: #f3e8ff;
-  --color-brand-500: #8b5cf6;
-  --color-brand-700: #6d28d9;
-  --color-brand-900: #4c1d95;
-
-  --color-surface: #ffffff;
-  --color-muted: #52525b;
-  --color-line: #e4e4e7;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Compatibility: a handful of surfaces owned by other packages still hardcode
+   Tailwind palette status colours (text-red-600, bg-green-100 text-green-800).
+   Redefining the palette variables under the dark theme keeps that text at
+   4.5:1 or better instead of 4.07:1, until those surfaces adopt the semantic
+   text-danger / text-success tokens. */
+:root[data-theme="dark"] {
+  --color-red-600: #ff8f85;
+  --color-red-700: #ffa9a1;
+  --color-green-700: #4ade80;
+  --color-green-800: #86efac;
+  --color-green-100: #052e16;
+  --color-amber-800: #fde68a;
+  --color-amber-100: #451a03;
+}
+
+/* ---------------------------------------------------------------- base */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Reserve space for the classic scrollbar so switching theme or opening the
+       mobile disclosure never shifts layout. */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Display voice for headings. Utilities (text-*, font-*) still win, so a page
+     can opt out; the point is that an unstyled heading is already on brand. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display-stack);
+    font-stretch: 62%;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  h4,
+  h5,
+  h6 {
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  /* Labels and legends are the visible name of a control: never muted below
+     body contrast, never smaller than the field they describe. */
+  label,
+  legend {
+    color: var(--foreground);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* A focus ring drawn inside a bordered control would be clipped; keep it out. */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  a:focus-visible {
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: var(--on-brand);
+  }
+
+  /* Native controls inherit the resolved scheme (color-scheme above), so date
+     pickers, scrollbars and form widgets match the theme. */
+}
+
+/* Reduced motion: kill every animation and transition, drop smooth scrolling.
+   Reveals and the post-navigation transition also render in their end state,
+   so nothing depends on motion to become visible. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---------------------------------------------------------------- utilities */
+
+/* Display voice as a utility: Archivo at the brand's condensed 62% width.
+   The width comes from the variable font's wdth axis, never from a transform. */
+@utility font-display {
+  font-family: var(--font-display-stack);
+  font-stretch: 62%;
 }
+
+/* Shared shell container: the header, the footer and page content all use it,
+   so chrome and content stay aligned at every breakpoint. */
+@utility shell-wrap {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--shell-max);
+  padding-inline: var(--shell-gutter);
+  @media (width >= 40rem) {
+    padding-inline: 2rem;
+  }
+}
+
+/* The brand allows three display sizes, each stepping down one size under
+   768px (64 -> 48, 48 -> 32, 32 -> 24). */
+.display-64,
+.display-48,
+.display-32 {
+  font-family: var(--font-display-stack);
+  font-stretch: 62%;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.display-64 {
+  font-size: 3rem;
+}
+
+.display-48 {
+  font-size: 2rem;
+}
+
+.display-32 {
+  font-size: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .display-64 {
+    font-size: 4rem;
+  }
+
+  .display-48 {
+    font-size: 3rem;
+  }
+
+  .display-32 {
+    font-size: 2rem;
+  }
+}
+
+/* Post-navigation transition. Applied by src/app/template.tsx on client-side
+   navigations only, so the first paint of a document is never delayed and the
+   LCP element is visible immediately. */
+@media (prefers-reduced-motion: no-preference) {
+  .page-reveal {
+    animation: page-reveal var(--duration-base) var(--ease-out-expo) both;
+  }
+
+  @keyframes page-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scroll reveal start state (see components/reveal.tsx). The component
+     removes it through a transition, and renders the end state directly when
+     the visitor prefers reduced motion. */
+  .reveal-pending {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .reveal-shown {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 500ms var(--ease-out-expo),
+      transform 500ms var(--ease-out-expo);
+  }
+}
+
+/* Under prefers-reduced-motion: reduce the two classes above are not emitted,
+   so reveal.tsx cannot hide content even if it adds the pending class. */

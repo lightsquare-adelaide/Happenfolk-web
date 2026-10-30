@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
+import { AuthShell } from "@/components/auth-shell";
+import { BRAND } from "@/lib/brand";
 import { afterOnboardingPath } from "@/lib/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 
-export const metadata = { title: "Complete your profile — Lightsquare" };
+export const metadata = { title: `Complete your profile · ${BRAND.name}` };
 
 export default async function OnboardingPage({
   searchParams,
@@ -29,17 +31,16 @@ export default async function OnboardingPage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-12">
-      <h1 className="text-2xl font-semibold">Complete your profile</h1>
-      <p className="max-w-sm text-sm text-muted">
-        Choose your account type and category, and pick a public handle. You can’t continue until
-        this is done.
-      </p>
+    <AuthShell
+      pageKey="onboarding"
+      title="Set up your profile"
+      subtitle="Three decisions, then you are in: what kind of account this is, which category your work sits in, and the public address people will use to find you."
+    >
       <OnboardingForm
         categories={categories ?? []}
         currentHandle={profile?.handle ?? null}
         nextPath={nextPath}
       />
-    </main>
+    </AuthShell>
   );
 }

@@ -41,7 +41,9 @@ export async function completeOnboarding(
     if (error.code === "23505") {
       return { error: "That handle was just taken by someone else. Try another." };
     }
-    return { error: error.message };
+    if (error.code === "23503") return { error: "That category is no longer available. Choose another." };
+    console.error("Onboarding profile update failed", error.code);
+    return { error: "Your profile could not be saved. Please try again." };
   }
 
   // Re-validated here: the hidden field is client-controlled.

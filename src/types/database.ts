@@ -34,6 +34,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_staff: {
+        Row: {
+          added_at: string
+          member_id: string
+        }
+        Insert: {
+          added_at?: string
+          member_id: string
+        }
+        Update: {
+          added_at?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_staff_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_staff_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "recommended_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_staff_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "trending_artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avatar_operation_locks: {
+        Row: {
+          expires_at: string
+          profile_id: string
+          token: string
+        }
+        Insert: {
+          expires_at: string
+          profile_id: string
+          token: string
+        }
+        Update: {
+          expires_at?: string
+          profile_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_operation_locks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatar_operation_locks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "recommended_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatar_operation_locks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "trending_artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -83,6 +160,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_collaborators_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "public_events"
             referencedColumns: ["id"]
           },
           {
@@ -159,6 +243,13 @@ export type Database = {
             foreignKeyName: "event_registrations_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
+            referencedRelation: "public_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "recommended_events"
             referencedColumns: ["id"]
           },
@@ -202,6 +293,9 @@ export type Database = {
           ends_at: string | null
           host_id: string
           id: string
+          is_hidden: boolean
+          location: string | null
+          open_to_collaborate: boolean
           price_cents: number
           search_vector: unknown
           starts_at: string
@@ -218,6 +312,9 @@ export type Database = {
           ends_at?: string | null
           host_id: string
           id?: string
+          is_hidden?: boolean
+          location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at: string
@@ -234,6 +331,9 @@ export type Database = {
           ends_at?: string | null
           host_id?: string
           id?: string
+          is_hidden?: boolean
+          location?: string | null
+          open_to_collaborate?: boolean
           price_cents?: number
           search_vector?: unknown
           starts_at?: string
@@ -371,6 +471,32 @@ export type Database = {
           },
         ]
       }
+      media_operation_locks: {
+        Row: {
+          expires_at: string
+          item_id: string
+          token: string
+        }
+        Insert: {
+          expires_at: string
+          item_id: string
+          token: string
+        }
+        Update: {
+          expires_at?: string
+          item_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_operation_locks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "portfolio_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount_cents: number
@@ -440,6 +566,7 @@ export type Database = {
           subject_type: string
           viewed_at: string
           viewer_id: string | null
+          visitor_hash: string | null
         }
         Insert: {
           id?: never
@@ -447,6 +574,7 @@ export type Database = {
           subject_type: string
           viewed_at?: string
           viewer_id?: string | null
+          visitor_hash?: string | null
         }
         Update: {
           id?: never
@@ -454,6 +582,7 @@ export type Database = {
           subject_type?: string
           viewed_at?: string
           viewer_id?: string | null
+          visitor_hash?: string | null
         }
         Relationships: [
           {
@@ -479,6 +608,30 @@ export type Database = {
           },
         ]
       }
+      page_views_monthly: {
+        Row: {
+          id: number
+          subject_id: string
+          subject_type: string
+          view_count: number
+          view_month: string
+        }
+        Insert: {
+          id?: never
+          subject_id: string
+          subject_type: string
+          view_count: number
+          view_month: string
+        }
+        Update: {
+          id?: never
+          subject_id?: string
+          subject_type?: string
+          view_count?: number
+          view_month?: string
+        }
+        Relationships: []
+      }
       payment_stub_settings: {
         Row: {
           force_fail: boolean
@@ -499,37 +652,49 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_hidden: boolean
           media_kind: string
+          position: number
           profile_id: string
           published: boolean
           published_at: string | null
           search_vector: unknown
+          tags: string[]
           title: string
           updated_at: string
+          year: number | null
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
+          is_hidden?: boolean
           media_kind: string
+          position?: number
           profile_id: string
           published?: boolean
           published_at?: string | null
           search_vector?: unknown
+          tags?: string[]
           title: string
           updated_at?: string
+          year?: number | null
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
+          is_hidden?: boolean
           media_kind?: string
+          position?: number
           profile_id?: string
           published?: boolean
           published_at?: string | null
           search_vector?: unknown
+          tags?: string[]
           title?: string
           updated_at?: string
+          year?: number | null
         }
         Relationships: [
           {
@@ -561,39 +726,57 @@ export type Database = {
           avatar_path: string | null
           bio: string | null
           category_id: number | null
+          contact_email: string | null
           created_at: string
           display_name: string
           handle: string
+          headline: string | null
           id: string
+          is_hidden: boolean
+          location: string | null
+          open_to_collaborate: boolean
           published: boolean
           search_vector: unknown
           updated_at: string
+          website: string | null
         }
         Insert: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
           avatar_path?: string | null
           bio?: string | null
           category_id?: number | null
+          contact_email?: string | null
           created_at?: string
           display_name: string
           handle: string
+          headline?: string | null
           id: string
+          is_hidden?: boolean
+          location?: string | null
+          open_to_collaborate?: boolean
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Update: {
           account_kind?: Database["public"]["Enums"]["account_kind"]
           avatar_path?: string | null
           bio?: string | null
           category_id?: number | null
+          contact_email?: string | null
           created_at?: string
           display_name?: string
           handle?: string
+          headline?: string | null
           id?: string
+          is_hidden?: boolean
+          location?: string | null
+          open_to_collaborate?: boolean
           published?: boolean
           search_vector?: unknown
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {
@@ -623,6 +806,92 @@ export type Database = {
         }
         Relationships: []
       }
+      public_events: {
+        Row: {
+          capacity: number | null
+          category_id: number | null
+          cover_path: string | null
+          created_at: string | null
+          description: string | null
+          ends_at: string | null
+          host_id: string | null
+          id: string | null
+          is_hidden: boolean | null
+          location: string | null
+          open_to_collaborate: boolean | null
+          price_cents: number | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["event_status"] | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number | null
+          category_id?: number | null
+          cover_path?: string | null
+          created_at?: string | null
+          description?: never
+          ends_at?: string | null
+          host_id?: string | null
+          id?: string | null
+          is_hidden?: boolean | null
+          location?: never
+          open_to_collaborate?: boolean | null
+          price_cents?: number | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number | null
+          category_id?: number | null
+          cover_path?: string | null
+          created_at?: string | null
+          description?: never
+          ends_at?: string | null
+          host_id?: string | null
+          id?: string | null
+          is_hidden?: boolean | null
+          location?: never
+          open_to_collaborate?: boolean | null
+          price_cents?: number | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "recommended_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "trending_artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recommended_artists: {
         Row: {
           affinity: number | null
@@ -632,6 +901,7 @@ export type Database = {
           handle: string | null
           id: string | null
           published_items: number | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -657,6 +927,7 @@ export type Database = {
           price_cents: number | null
           starts_at: string | null
           title: string | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -698,6 +969,7 @@ export type Database = {
           handle: string | null
           id: string | null
           published_items: number | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -718,6 +990,7 @@ export type Database = {
           price_cents: number | null
           starts_at: string | null
           title: string | null
+          trending_score: number | null
           view_count: number | null
         }
         Relationships: [
@@ -753,10 +1026,41 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_hidden: {
+        Args: {
+          p_hidden: boolean
+          p_subject_id: string
+          p_subject_type: string
+        }
+        Returns: undefined
+      }
+      admin_update_event: {
+        Args: {
+          p_description: string
+          p_event_id: string
+          p_location: string
+          p_title: string
+        }
+        Returns: undefined
+      }
+      admin_update_item: {
+        Args: { p_description: string; p_item_id: string; p_title: string }
+        Returns: undefined
+      }
+      admin_update_profile: {
+        Args: { p_bio: string; p_display_name: string; p_member_id: string }
+        Returns: undefined
+      }
       cancel_registration: {
         Args: { p_registration_id: string }
         Returns: undefined
       }
+      claim_avatar_operation: { Args: { p_token: string }; Returns: boolean }
+      claim_media_operation: {
+        Args: { p_item_id: string; p_token: string }
+        Returns: boolean
+      }
+      handle_available: { Args: { p_handle: string }; Returns: boolean }
       is_event_collaborator: {
         Args: { p_event: string; p_member: string }
         Returns: boolean
@@ -765,6 +1069,24 @@ export type Database = {
         Args: { p_event: string; p_member: string }
         Returns: boolean
       }
+      is_staff: { Args: never; Returns: boolean }
+      member_category_view_signal: {
+        Args: never
+        Returns: {
+          category_id: number
+          view_count: number
+        }[]
+      }
+      move_portfolio_item: {
+        Args: { p_direction: string; p_item_id: string }
+        Returns: boolean
+      }
+      page_view_dedupe_window: { Args: never; Returns: string }
+      page_view_visitor_hash: {
+        Args: { p_subject_id: string; p_subject_type: string }
+        Returns: string
+      }
+      purge_page_views_before: { Args: { p_cutoff: string }; Returns: number }
       record_member_view: {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: undefined
@@ -774,13 +1096,70 @@ export type Database = {
         Returns: undefined
       }
       register_for_event: { Args: { p_event_id: string }; Returns: string }
+      release_avatar_operation: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      release_media_operation: {
+        Args: { p_item_id: string; p_token: string }
+        Returns: undefined
+      }
+      reorder_media: {
+        Args: { p_asset_id: string; p_direction: string; p_item_id: string }
+        Returns: boolean
+      }
+      run_page_view_retention: {
+        Args: { p_retain?: string }
+        Returns: {
+          archived_rows: number
+          purged_rows: number
+        }[]
+      }
+      search_artists: {
+        Args: { p_category_id?: number; p_limit?: number; p_query: string }
+        Returns: {
+          avatar_path: string
+          category_id: number
+          display_name: string
+          handle: string
+          id: string
+        }[]
+      }
+      search_events: {
+        Args: { p_category_id?: number; p_limit?: number; p_query: string }
+        Returns: {
+          category_id: number
+          cover_path: string
+          id: string
+          location: string
+          price_cents: number
+          starts_at: string
+          title: string
+        }[]
+      }
+      search_items: {
+        Args: { p_category_id?: number; p_limit?: number; p_query: string }
+        Returns: {
+          category_id: number
+          id: string
+          profile_id: string
+          title: string
+        }[]
+      }
       set_payment_stub_force_fail: {
         Args: { p_force_fail: boolean }
         Returns: undefined
       }
-      settle_order: { Args: { p_order_id: string }; Returns: string }
+      settle_order: {
+        Args: { p_force_fail?: boolean; p_order_id: string }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      subject_is_public: {
+        Args: { p_subject_id: string; p_subject_type: string }
+        Returns: boolean
+      }
       toggle_like: {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: boolean
@@ -805,12 +1184,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -834,11 +1213,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -859,11 +1238,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -884,11 +1263,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -901,11 +1280,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

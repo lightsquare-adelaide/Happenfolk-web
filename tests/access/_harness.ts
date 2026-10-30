@@ -166,7 +166,15 @@ export async function addCollaborator(
 
 export type ItemRow = { id: string; title: string; profile_id: string };
 
-/** Creates a portfolio item with one alt-texted media row. */
+/**
+ * Creates a portfolio item with one alt-texted media row.
+ *
+ * Order matters: the row is inserted as a draft, the media is attached,
+ * and only then is it published. Migration 20261026000300 refuses to
+ * publish a work that has no media at all (audit A6a), so the old
+ * "insert already published, attach media afterwards" sequence is no
+ * longer a legal path for anybody — fixtures included.
+ */
 export async function createPortfolioItem(
   owner: TestUser,
   title: string,
@@ -179,8 +187,7 @@ export async function createPortfolioItem(
       title,
       description: `${title} description`,
       media_kind: "image",
-      published,
-      published_at: published ? new Date().toISOString() : null,
+      published: false,
     })
     .select("id, title, profile_id")
     .single();
@@ -195,6 +202,18 @@ export async function createPortfolioItem(
     bucket: "media",
   });
   if (media.error) throw new Error(`createPortfolioItem media failed: ${media.error.message}`);
+  if (published) {
+    const flagged = await owner.client
+      .from("portfolio_items")
+      .update({ published: true, published_at: new Date().toISOString() })
+      .eq("id", created.data.id)
+      .select("id, title, profile_id")
+      .single();
+    if (flagged.error || !flagged.data) {
+      throw new Error(`createPortfolioItem publish failed: ${flagged.error?.message}`);
+    }
+    return flagged.data;
+  }
   return created.data;
 }
 

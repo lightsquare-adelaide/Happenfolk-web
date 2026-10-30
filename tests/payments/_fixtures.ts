@@ -44,6 +44,49 @@ export async function registrationCount(eventId: string): Promise<number> {
   return rows[0].n as number;
 }
 
+/**
+ * Seats currently held: the exact status list register_for_event counts
+ * against capacity. 'cancelled' rows are deliberately excluded, and
+ * 'payment_failed' rows are deliberately INCLUDED (audit A9, documented
+ * tradeoff: a declined payment keeps the seat until the member cancels or
+ * pays). tests/payments/05 pins that policy.
+ */
+export async function seatCount(eventId: string): Promise<number> {
+  const a = await admin();
+  const { rows } = await a.query(
+    `select count(*)::int as n
+       from public.event_registrations
+      where event_id = $1 and status in ('pending', 'confirmed', 'payment_failed')`,
+    [eventId],
+  );
+  return rows[0].n as number;
+}
+
+export async function registrationStatus(
+  eventId: string,
+  memberId: string,
+): Promise<string | null> {
+  const a = await admin();
+  const { rows } = await a.query(
+    `select status from public.event_registrations
+      where event_id = $1 and member_id = $2`,
+    [eventId, memberId],
+  );
+  return (rows[0]?.status as string) ?? null;
+}
+
+export async function orderStatus(orderId: string): Promise<string | null> {
+  const a = await admin();
+  const { rows } = await a.query(`select status from public.orders where id = $1`, [orderId]);
+  return (rows[0]?.status as string) ?? null;
+}
+
+/** Flips the stub gateway the way only service_role may (0011). */
+export async function setForceFail(forceFail: boolean): Promise<void> {
+  const a = await admin();
+  await a.query(`update public.payment_stub_settings set force_fail = $1 where id`, [forceFail]);
+}
+
 export async function forceFailFlag(): Promise<boolean> {
   const a = await admin();
   const { rows } = await a.query(`select force_fail from public.payment_stub_settings where id`);
