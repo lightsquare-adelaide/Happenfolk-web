@@ -214,3 +214,29 @@ requests, absent User-Agent headers, untrusted mode, and a never-ended
 2 KiB chunked request returning 400 within two seconds. It restarts the
 same app port for untrusted mode, cleans up its fixtures, and rebuilds
 when application inputs or `.env.local` are newer than the build.
+
+## Event venue privacy (D5)
+
+Migration `20261030000100_event_venue_privacy.sql` keeps event summaries
+public while requiring sign-in for exact venues and full descriptions.
+Anonymous callers have SELECT only on explicitly listed safe `events`
+columns; selecting private columns, wildcard reads, or filtering/ordering
+by a private column fails with a permission error.
+
+Public pages use the read-only `public_events` view. It explicitly filters
+to published, visible events and returns null for `location` and
+`description` without an authenticated identity. Its owner evaluation is
+intentional: it masks columns that anonymous users cannot select directly.
+It exposes neither private drafts nor the stored search vector. Signed-in
+team previews keep using `events` and its existing RLS policies.
+
+`recommended_events` uses the same masked summary. `search_events` keeps
+its bounded signature and relevance rules; its static owner-executed query
+explicitly filters published, visible rows and masks the venue for anonymous
+callers. Other search RPCs and discovery views do not return event venues.
+
+`tests/access/28-event-venue-privacy.spec.ts` verifies direct REST reads and
+predicates, every anonymously readable public view (enumerated from the
+catalogue), all three public search RPCs, and unrelated signed-in member
+positive controls. HTTP event-page tests also inspect the full response,
+including streamed data, and verify a login link returning to the event.

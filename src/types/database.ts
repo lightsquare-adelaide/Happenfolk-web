@@ -166,6 +166,13 @@ export type Database = {
             foreignKeyName: "event_collaborators_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
+            referencedRelation: "public_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_collaborators_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "recommended_events"
             referencedColumns: ["id"]
           },
@@ -230,6 +237,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "public_events"
             referencedColumns: ["id"]
           },
           {
@@ -791,6 +805,92 @@ export type Database = {
           subject_type: string | null
         }
         Relationships: []
+      }
+      public_events: {
+        Row: {
+          capacity: number | null
+          category_id: number | null
+          cover_path: string | null
+          created_at: string | null
+          description: string | null
+          ends_at: string | null
+          host_id: string | null
+          id: string | null
+          is_hidden: boolean | null
+          location: string | null
+          open_to_collaborate: boolean | null
+          price_cents: number | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["event_status"] | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number | null
+          category_id?: number | null
+          cover_path?: string | null
+          created_at?: string | null
+          description?: never
+          ends_at?: string | null
+          host_id?: string | null
+          id?: string | null
+          is_hidden?: boolean | null
+          location?: never
+          open_to_collaborate?: boolean | null
+          price_cents?: number | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number | null
+          category_id?: number | null
+          cover_path?: string | null
+          created_at?: string | null
+          description?: never
+          ends_at?: string | null
+          host_id?: string | null
+          id?: string | null
+          is_hidden?: boolean | null
+          location?: never
+          open_to_collaborate?: boolean | null
+          price_cents?: number | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "recommended_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "trending_artists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recommended_artists: {
         Row: {

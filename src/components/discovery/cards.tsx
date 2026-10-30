@@ -44,7 +44,7 @@ export function EventTile({ event, category, eager = false }: {
       <p className="mt-2 text-sm leading-6 text-muted">
         <time dateTime={event.startsAt}>{formatEventDate(event.startsAt)}</time>
       </p>
-      <p className="mt-1 break-words text-sm leading-6 text-muted">{event.location || "Location to be confirmed"}</p>
+      <p className="mt-1 break-words text-sm leading-6 text-muted">{event.location || "Sign in to see the venue"}</p>
     </Link>
   );
 }
@@ -54,12 +54,13 @@ export function ArtistTile({ artist, category, eager = false }: {
 }) {
   return (
     <Link prefetch={false} href={`/artists/${encodeURIComponent(artist.handle)}`} className="group block min-w-0 outline-offset-4">
-      <div className="flex aspect-square items-center justify-center overflow-hidden border border-line bg-tint">
+      <span className="sr-only">View artist profile: </span>
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden border border-line bg-tint">
         {artist.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- public artist avatar
           <img src={artist.avatarUrl} alt={`${artist.displayName}'s avatar`} width={320} height={320}
             loading={eager ? "eager" : "lazy"} decoding="async"
-            className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]" />
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]" />
         ) : (
           <span aria-hidden="true" className="font-display text-7xl leading-none text-muted">{initials(artist.displayName)}</span>
         )}
