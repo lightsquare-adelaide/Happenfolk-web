@@ -10,6 +10,7 @@ import {
   secondaryButtonClass, selectClass, textareaClass,
 } from "@/components/field";
 import { formatEventDate } from "@/lib/dashboard";
+import { googleMapsSearchUrl } from "@/lib/maps";
 import {
   adelaideWallTimeToInstant,
   instantToAdelaideWallClock,
@@ -219,6 +220,7 @@ function EventCard({ event, categories, call, json, setMessage }: CardProps) {
 
   const start = instantToAdelaideWallClock(event.startsAt);
   const end = event.endsAt ? instantToAdelaideWallClock(event.endsAt) : { date: "", time: "" };
+  const mapsUrl = event.location ? googleMapsSearchUrl(event.location) : null;
 
   async function patch(body: Record<string, unknown>, okText?: string) {
     return call(`/api/events/${event.id}`, json("PATCH", body), okText);
@@ -272,7 +274,26 @@ function EventCard({ event, categories, call, json, setMessage }: CardProps) {
             {formatEventDate(event.startsAt)}
             {event.endsAt ? <> – {formatEventDate(event.endsAt)}</> : null}
             {" · Adelaide"}
-            {event.location ? <> · {event.location}</> : null}
+            {event.location ? (
+              <>
+                {" · "}
+                {event.location}
+                {mapsUrl ? (
+                  <>
+                    {" "}
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open ${event.location} in Google Maps`}
+                      className="underline underline-offset-4"
+                    >
+                      Open in Google Maps
+                    </a>
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </p>
         </div>
         <div className="text-right">

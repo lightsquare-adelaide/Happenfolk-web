@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/field";
 import { BRAND } from "@/lib/brand";
 import { formatEventDate } from "@/lib/dashboard";
+import { googleMapsSearchUrl } from "@/lib/maps";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ViewTracker } from "@/components/view-tracker";
 
@@ -46,6 +47,12 @@ export default async function EventPage({ params }: Context) {
   }
   const coverUrl = event.cover_path
     ? supabase.storage.from("covers").getPublicUrl(event.cover_path).data.publicUrl : null;
+  // The Maps URL encodes the venue, so the anchor renders only for
+  // signed-in viewers; the anonymous branch below renders neither the
+  // venue nor any link carrying it. Anonymous reads go through the
+  // public_events view where location is null anyway, which makes
+  // mapsUrl null a second time.
+  const mapsUrl = googleMapsSearchUrl(event.location);
 
   return (
     <main className="shell-wrap py-8 lg:py-12">
@@ -74,9 +81,29 @@ export default async function EventPage({ params }: Context) {
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-muted">Where</dt>
-            <dd className="mt-2 break-words text-base leading-7">{account.data.user ? (event.location || "Location to be confirmed") : (
-              <Link href={`/login?next=${encodeURIComponent(`/events/${event.id}`)}`} className="underline underline-offset-4">Sign in to see the venue</Link>
-            )}</dd>
+            <dd className="mt-2 break-words text-base leading-7">
+              {account.data.user ? (
+                <>
+                  {event.location || "Location to be confirmed"}
+                  {mapsUrl ? (
+                    <>
+                      {" "}
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Open ${event.location} in Google Maps`}
+                        className="underline underline-offset-4"
+                      >
+                        Open in Google Maps
+                      </a>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <Link href={`/login?next=${encodeURIComponent(`/events/${event.id}`)}`} className="underline underline-offset-4">Sign in to see the venue</Link>
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-muted">Organised by</dt>
