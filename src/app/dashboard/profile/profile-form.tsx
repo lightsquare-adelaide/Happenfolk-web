@@ -10,7 +10,8 @@ import { updateProfile, type ProfileState } from "./actions";
 type Category = { id: number; name: string };
 type Profile = {
   handle: string; display_name: string; account_kind: "individual" | "organisation";
-  category_id: number; bio: string | null; published: boolean;
+  category_id: number; bio: string | null; contact_email: string | null;
+  open_to_collaborate: boolean; published: boolean;
 };
 
 export function ProfileForm({ profile, categories }: { profile: Profile; categories: Category[] }) {
@@ -74,6 +75,16 @@ export function ProfileForm({ profile, categories }: { profile: Profile; categor
         <Field label="Bio" hint={"Tell visitors about your practice, in up to " + BIO_MAX + " characters."}>
           <textarea name="bio" rows={6} maxLength={BIO_MAX} defaultValue={profile.bio ?? ""} className={inputClass + " resize-y leading-7"} />
         </Field>
+        <Field label="Contact email (optional)" hint="Saving an address opts in to showing it on your published profile. Clear it to withdraw consent. Your sign-in email is never copied here.">
+          <input name="contactEmail" type="email" defaultValue={profile.contact_email ?? ""} className={inputClass} autoComplete="email" placeholder="studio@example.org" />
+        </Field>
+        <label className="flex cursor-pointer items-start gap-3 border border-line bg-surface p-5">
+          <input type="checkbox" name="openToCollaborate" defaultChecked={profile.open_to_collaborate} className="mt-1 shrink-0 accent-brand" />
+          <span className="min-w-0">
+            <span className="block font-medium">Open to collaboration</span>
+            <span className="mt-1 block text-sm leading-6 text-muted">List my published profile in the collaboration directory so other practitioners and hosts can get in touch.</span>
+          </span>
+        </label>
         <label className="flex cursor-pointer items-start gap-3 border border-line bg-surface p-5">
           <input type="checkbox" name="published" defaultChecked={profile.published} className="mt-1 shrink-0 accent-brand" />
           <span className="min-w-0">

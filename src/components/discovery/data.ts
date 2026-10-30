@@ -32,6 +32,8 @@ export type WorkCardData = {
   artistHandle: string;
   artistName: string;
   coverUrl: string | null;
+  smallCoverUrl?: string | null;
+  smallWidth?: number | null;
   alt: string;
   width: number | null;
   height: number | null;
@@ -82,7 +84,7 @@ function toEventCard(supabase: Supabase, row: EventRow, trending: boolean): Even
 /** Event cards for known ids, kept in the order of `ids` (RLS-filtered). */
 export async function loadEventsByIds(supabase: Supabase, ids: string[], trendingIds: Set<string> = new Set()) {
   if (ids.length === 0) return [];
-  const { data } = await supabase.from("events").select(EVENT_FIELDS).in("id", ids).eq("status", "published");
+  const { data } = await supabase.from("public_events").select(EVENT_FIELDS).in("id", ids).eq("status", "published");
   const byId = new Map((data ?? []).map((row) => [row.id, row as EventRow]));
   return ids.flatMap((id) => {
     const row = byId.get(id);
@@ -96,7 +98,7 @@ export async function loadHomeEvents(supabase: Supabase, signedIn: boolean, size
   const view = signedIn ? "recommended_events" : "trending_events";
   const [scored, recent] = await Promise.all([
     supabase.from(view).select("id, trending_score").gte("starts_at", now).gt("trending_score", 0).limit(size),
-    supabase.from("events").select(EVENT_FIELDS).eq("status", "published").gte("starts_at", now)
+    supabase.from("public_events").select(EVENT_FIELDS).eq("status", "published").gte("starts_at", now)
       .order("created_at", { ascending: false }).order("id").limit(size),
   ]);
   const scoredRows = (scored.data ?? []).filter((row): row is { id: string; trending_score: number } =>
@@ -176,6 +178,8 @@ async function attachCovers(supabase: Supabase, rows: WorkRow[]): Promise<WorkCa
     if (!profile) return [];
     const mine = (media ?? []).filter((m) => m.portfolio_item_id === row.id) as Array<MediaRow & { portfolio_item_id: string }>;
     const cover = coverAsset(mine);
+    const stem = (path: string) => path.replace(/-(?:medium|small)\.[^/.]+$/, "");
+    const small = cover ? mine.find((m) => m.bucket === cover.bucket && m.variant === "small" && stem(m.path) === stem(cover.path)) : null;
     const artistName = profile.display_name?.trim() || profile.handle;
     return [{
       id: row.id,
@@ -183,6 +187,8 @@ async function attachCovers(supabase: Supabase, rows: WorkRow[]): Promise<WorkCa
       artistHandle: profile.handle,
       artistName,
       coverUrl: cover ? supabase.storage.from("media").getPublicUrl(cover.path).data.publicUrl : null,
+      smallCoverUrl: small ? supabase.storage.from("media").getPublicUrl(small.path).data.publicUrl : null,
+      smallWidth: small?.width ?? null,
       alt: cover?.alt_text?.trim() || `${row.title}, by ${artistName}`,
       width: cover?.width ?? null,
       height: cover?.height ?? null,

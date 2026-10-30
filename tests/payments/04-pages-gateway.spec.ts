@@ -16,6 +16,8 @@ import {
  * (hard rule 2).
  */
 
+import { cardInputAttributes } from "./_card-inputs";
+
 const BANNER = "Simulated payment — no money moves and no card details are collected.";
 
 let memberCookie: string;
@@ -96,7 +98,8 @@ describe("P7 — stub gateway over HTTP", () => {
     expect(html).toContain(BANNER);
     // Hard rule 2: no card inputs of any kind (name, autocomplete,
     // placeholder, or iframe-embedded fake provider).
-    expect(html).not.toMatch(/<input[^>]*(card|cc-)/i);
+    // A registration UUID can contain cc-; it is bound data, not a card field.
+    expect(cardInputAttributes(html)).toEqual([]);
     expect(html).not.toMatch(/autocomplete=["'][^"']*cc-/i);
     expect(html).not.toMatch(/<iframe/i);
     expect(html).not.toMatch(/stripe|paypal/i);

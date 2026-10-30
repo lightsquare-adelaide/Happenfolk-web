@@ -22,9 +22,9 @@ export default async function EventsPage() {
   const supabase = await createSupabaseServerClient();
   const now = new Date().toISOString();
   const [upcoming, recent, categories, account] = await Promise.all([
-    supabase.from("events").select(fields).eq("status", "published").gte("starts_at", now)
+    supabase.from("public_events").select(fields).eq("status", "published").gte("starts_at", now)
       .order("starts_at").order("id").limit(24),
-    supabase.from("events").select(fields).eq("status", "published").lt("starts_at", now)
+    supabase.from("public_events").select(fields).eq("status", "published").lt("starts_at", now)
       .order("starts_at", { ascending: false }).order("id").limit(12),
     supabase.from("categories").select("id, name"),
     supabase.auth.getUser(),
@@ -93,7 +93,7 @@ export default async function EventsPage() {
                     ) : null}
                     <h3 className="mt-3 break-words font-sans text-xl font-medium leading-7 underline-offset-4 group-hover:underline">{event.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted"><time dateTime={event.starts_at}>{formatEventDate(event.starts_at)}</time></p>
-                    <p className="mt-1 break-words text-sm leading-6 text-muted">{event.location || "Location to be confirmed"}</p>
+                    <p className="mt-1 break-words text-sm leading-6 text-muted">{event.location || (account.data.user ? "Location to be confirmed" : "Sign in to see the venue")}</p>
                   </Link>
                 </li>
               );

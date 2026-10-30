@@ -52,10 +52,10 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   const theme = useSyncExternalStore(subscribeToTheme, getSnapshot, getServerSnapshot);
   const label =
     theme === "dark"
-      ? "Switch to light theme"
+      ? "Dark theme: switch to light theme"
       : theme === "light"
-        ? "Switch to dark theme"
-        : "Switch colour theme";
+        ? "Light theme: switch to dark theme"
+        : "Auto theme: switch colour theme";
 
   return (
     <button
